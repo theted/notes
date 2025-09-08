@@ -39,6 +39,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const logout = useCallback(() => {
     setPassword(null);
     setIsAuthed(false);
+    try {
+      localStorage.removeItem('notes-rq-cache-v1');
+    } catch {}
   }, []);
 
   const value = useMemo(
