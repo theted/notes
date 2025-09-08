@@ -16,14 +16,16 @@ app.get('/api/health', (_req, res) => {
   res.json({ status: 'ok' });
 });
 
-// Simple auth check endpoint; requires correct X-Password header
-app.get('/api/auth', requirePassword, (_req, res) => {
-  res.json({ ok: true });
+// Auth handshake: returns or creates user from password
+app.get('/api/auth', requirePassword, (req, res) => {
+  const userId = (req as any).userId as number;
+  res.json({ ok: true, userId });
 });
 
-app.get('/api/notes', (req, res) => {
+app.get('/api/notes', requirePassword, (req, res) => {
+  const userId = (req as any).userId as number;
   const q = (req.query.q as string | undefined) || '';
-  const notes = q.trim() ? searchNotes(q.trim()) : listNotes();
+  const notes = q.trim() ? searchNotes(q.trim(), userId) : listNotes(userId);
   // Send lightweight list payload with excerpt
   const items = notes.map((n) => ({
     id: n.id,
@@ -34,10 +36,11 @@ app.get('/api/notes', (req, res) => {
   res.json(items);
 });
 
-app.get('/api/notes/:id', (req, res) => {
+app.get('/api/notes/:id', requirePassword, (req, res) => {
+  const userId = (req as any).userId as number;
   const id = Number(req.params.id);
   if (!Number.isFinite(id)) return res.status(400).json({ error: 'Invalid id' });
-  const note = getNote(id);
+  const note = getNote(id, userId);
   if (!note) return res.status(404).json({ error: 'Not found' });
   res.json(note);
 });
@@ -57,45 +60,49 @@ app.get('/api/ai/health', requirePassword, async (_req, res) => {
 const NoteSchema = z.object({ title: z.string().min(1), content: z.string().default('') });
 
 app.post('/api/notes', requirePassword, (req, res) => {
+  const userId = (req as any).userId as number;
   const parse = NoteSchema.safeParse(req.body);
   if (!parse.success)
     return res.status(400).json({ error: 'Invalid payload', details: parse.error.flatten() });
-  const note = createNote(parse.data);
+  const note = createNote(parse.data, userId);
   res.status(201).json(note);
 });
 
 app.put('/api/notes/:id', requirePassword, (req, res) => {
+  const userId = (req as any).userId as number;
   const id = Number(req.params.id);
   if (!Number.isFinite(id)) return res.status(400).json({ error: 'Invalid id' });
   const parse = NoteSchema.safeParse(req.body);
   if (!parse.success)
     return res.status(400).json({ error: 'Invalid payload', details: parse.error.flatten() });
-  const note = updateNote(id, parse.data);
+  const note = updateNote(id, parse.data, userId);
   if (!note) return res.status(404).json({ error: 'Not found' });
   res.json(note);
 });
 
 app.delete('/api/notes/:id', requirePassword, (req, res) => {
+  const userId = (req as any).userId as number;
   const id = Number(req.params.id);
   if (!Number.isFinite(id)) return res.status(400).json({ error: 'Invalid id' });
-  const ok = deleteNote(id);
+  const ok = deleteNote(id, userId);
   if (!ok) return res.status(404).json({ error: 'Not found' });
   res.status(204).end();
 });
 
 // AI Remix endpoint
 app.post('/api/notes/:id/remix', requirePassword, async (req, res) => {
+  const userId = (req as any).userId as number;
   const id = Number(req.params.id);
   if (!Number.isFinite(id)) return res.status(400).json({ error: 'Invalid id' });
   const Schema = z.object({ persona: z.string().min(1) });
   const parse = Schema.safeParse(req.body);
   if (!parse.success)
     return res.status(400).json({ error: 'Invalid payload', details: parse.error.flatten() });
-  const current = getNote(id);
+  const current = getNote(id, userId);
   if (!current) return res.status(404).json({ error: 'Not found' });
   try {
     const remixed = await remixContent(current.content, parse.data.persona);
-    const updated = updateNote(id, { title: current.title, content: remixed });
+    const updated = updateNote(id, { title: current.title, content: remixed }, userId);
     if (!updated) return res.status(500).json({ error: 'Failed to update' });
     res.json(updated);
   } catch (e) {

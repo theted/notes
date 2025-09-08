@@ -1,7 +1,12 @@
 import React, { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { pageEnter, headlineEnter, buttonHoverTap, inputFocus } from '../config/animations';
+import {
+  loginSwoosh as pageEnter,
+  headlineEnter,
+  buttonHoverTap,
+  inputFocus,
+} from '../config/animations';
 import { container, headline } from '../config/styles';
 import Input from '../components/ui/input';
 import Button from '../components/ui/button';
@@ -23,7 +28,7 @@ const Login: React.FC = () => {
     const ok = await login(pwd);
     setLoading(false);
     if (ok) navigate(from, { replace: true });
-    else setError('Incorrect password.');
+    else setError('Login error');
   };
 
   return (
@@ -32,7 +37,7 @@ const Login: React.FC = () => {
         <motion.h1 className={headline} {...headlineEnter}>
           Welcome
         </motion.h1>
-        <div className="text-gray-400 mt-2">Enter password to access your notes.</div>
+        <div className="text-gray-400 mt-2">Your password is your login</div>
       </header>
       <form onSubmit={onSubmit} className="max-w-md mx-auto w-[min(90vw,28rem)]">
         <motion.div {...inputFocus}>

@@ -1,4 +1,5 @@
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
+import { queryClient } from '../queryClient';
 
 type AuthContextValue = {
   password: string | null;
@@ -26,8 +27,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         headers: { 'X-Password': pwd },
       });
       if (res.ok) {
+        const body = (await res.json()) as { ok: boolean; userId: number };
         setPassword(pwd);
         setIsAuthed(true);
+        try {
+          localStorage.setItem('userId', String(body.userId));
+        } catch {}
         return true;
       }
       return false;
@@ -40,7 +45,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setPassword(null);
     setIsAuthed(false);
     try {
-      localStorage.removeItem('notes-rq-cache-v1');
+      // Clear in-memory query cache and persisted localStorage cache
+      queryClient.clear();
+      localStorage.clear();
     } catch {}
   }, []);
 
