@@ -10,17 +10,14 @@ import {
   textareaFocus,
   headlineEnter,
 } from '../config/animations';
-import {
-  container,
-  buttonDanger,
-  buttonGhost,
-  inputBase,
-  textareaBase,
-  headline,
-} from '../config/styles';
+import { container, headline } from '../config/styles';
 import { useAuth } from '../auth/AuthContext';
 import TopBar from '../components/TopBar';
 import { useMutation, useQuery, useQueryClient, keepPreviousData } from '@tanstack/react-query';
+import Input from '../components/ui/input';
+import Textarea from '../components/ui/textarea';
+import Button from '../components/ui/button';
+import { Dropdown, DropdownTrigger, DropdownContent, DropdownItem } from '../components/ui/dropdown';
 
 const NoteDetail = () => {
   const { id } = useParams<{ id: string }>();
@@ -143,30 +140,34 @@ const NoteDetail = () => {
         right={
           <>
             {!editing && (
-              <motion.button
-                onClick={() => {
-                  setTitle(note?.title ?? '');
-                  setContent(note?.content ?? '');
-                  setEditing(true);
-                }}
-                className={buttonGhost}
-                {...buttonHoverTap}
-              >
-                Edit
-              </motion.button>
+              <motion.div {...buttonHoverTap}>
+                <Button
+                  variant="ghost"
+                  onClick={() => {
+                    setTitle(note?.title ?? '');
+                    setContent(note?.content ?? '');
+                    setEditing(true);
+                  }}
+                >
+                  Edit
+                </Button>
+              </motion.div>
             )}
-            <motion.button onClick={onDelete} className={buttonDanger} {...buttonHoverTap}>
-              Delete
-            </motion.button>
-            <button
+            <motion.div {...buttonHoverTap}>
+              <Button variant="destructive" onClick={onDelete}>
+                Delete
+              </Button>
+            </motion.div>
+            <Button
+              variant="ghost"
+              size="sm"
               onClick={() => {
                 logout();
                 navigate('/login');
               }}
-              className="text-gray-300/80 hover:text-white transition px-2 py-1"
             >
               Logout
-            </button>
+            </Button>
           </>
         }
       />
@@ -178,34 +179,21 @@ const NoteDetail = () => {
           animate={{ opacity: 1, scale: 1 }}
           transition={{ duration: 0.2 }}
         >
-          <motion.input
-            value={title}
-            onChange={(e) => setTitle(e.target.value)}
-            className={inputBase}
-            {...inputFocus}
-          />
-          <motion.textarea
-            value={content}
-            onChange={(e) => setContent(e.target.value)}
-            rows={14}
-            className={textareaBase}
-            {...textareaFocus}
-          />
+          <motion.div {...inputFocus}>
+            <Input value={title} onChange={(e) => setTitle(e.target.value)} />
+          </motion.div>
+          <motion.div {...textareaFocus}>
+            <Textarea value={content} onChange={(e) => setContent(e.target.value)} rows={14} />
+          </motion.div>
           <div className="mt-3 flex gap-2">
-            <motion.button
-              onClick={onSave}
-              className="px-4 py-2 rounded-lg bg-indigo-500/90 transition"
-              {...buttonHoverTap}
-            >
-              Save
-            </motion.button>
-            <motion.button
-              onClick={() => setEditing(false)}
-              className={buttonGhost}
-              {...buttonHoverTap}
-            >
-              Cancel
-            </motion.button>
+            <motion.div {...buttonHoverTap}>
+              <Button onClick={onSave}>Save</Button>
+            </motion.div>
+            <motion.div {...buttonHoverTap}>
+              <Button variant="ghost" onClick={() => setEditing(false)}>
+                Cancel
+              </Button>
+            </motion.div>
           </div>
         </motion.div>
       ) : (
@@ -223,20 +211,32 @@ const NoteDetail = () => {
             Updated: {new Date(note.updatedAt).toLocaleString()}
           </div>
           <div className="mt-6 flex flex-wrap items-center gap-3">
-            <label className="text-sm text-gray-400">AI remix</label>
-            <select
-              value={persona}
-              onChange={async (e) => { const p = e.target.value; setPersona(p); if (p) await remixMutation.mutateAsync(p); }}
-              disabled={isRemixing || personasLoading}
-              className="px-3 py-2 text-sm rounded-lg bg-white/5 ring-1 ring-white/10 focus:outline-none focus:ring-2 focus:ring-indigo-400/60 disabled:opacity-60"
-            >
-              <option value="">Select…</option>
-              {(personas ?? ['funny','corporate','silly','overfriendly','sarcastic','summary-scholar']).map((p) => (
-                <option key={p} value={p}>
-                  {p === 'summary-scholar' ? 'Summary scholar' : p.charAt(0).toUpperCase() + p.slice(1)}
-                </option>
-              ))}
-            </select>
+            <Dropdown>
+              <DropdownTrigger className="text-sm">
+                {isRemixing ? 'Remixing…' : persona ? `Persona: ${persona}` : 'AI remix'}
+                <svg width="16" height="16" viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M6 8l4 4 4-4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
+              </DropdownTrigger>
+              <DropdownContent>
+                <DropdownItem
+                  onClick={() => {
+                    setPersona('');
+                  }}
+                >
+                  Clear
+                </DropdownItem>
+                {(personas ?? ['funny', 'corporate', 'silly', 'overfriendly', 'sarcastic', 'summary-scholar']).map((p) => (
+                  <DropdownItem
+                    key={p}
+                    onClick={async () => {
+                      setPersona(p);
+                      await remixMutation.mutateAsync(p);
+                    }}
+                  >
+                    {p === 'summary-scholar' ? 'Summary scholar' : p.charAt(0).toUpperCase() + p.slice(1)}
+                  </DropdownItem>
+                ))}
+              </DropdownContent>
+            </Dropdown>
             {personasLoading && (
               <div className="flex items-center gap-2 text-gray-400 text-sm">
                 <span className="inline-block h-4 w-4 rounded-full border-2 border-white/20 border-t-transparent animate-spin" />

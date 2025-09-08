@@ -2,7 +2,9 @@ import React, { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { pageEnter, headlineEnter, buttonHoverTap, inputFocus } from '../config/animations';
-import { container, headline, inputBase, buttonPrimary } from '../config/styles';
+import { container, headline } from '../config/styles';
+import Input from '../components/ui/input';
+import Button from '../components/ui/button';
 import { useAuth } from '../auth/AuthContext';
 
 const Login: React.FC = () => {
@@ -25,33 +27,28 @@ const Login: React.FC = () => {
   };
 
   return (
-    <motion.div className={container} {...pageEnter}>
-      <header className="mb-6 text-center">
+    <motion.div className={`${container} min-h-screen grid place-content-center`} {...pageEnter}>
+      <header className="mb-8 text-center">
         <motion.h1 className={headline} {...headlineEnter}>
           Welcome
         </motion.h1>
         <div className="text-gray-400 mt-2">Enter password to access your notes.</div>
       </header>
-      <form onSubmit={onSubmit} className="max-w-md mx-auto">
-        <motion.input
-          type="password"
-          value={pwd}
-          onChange={(e) => setPwd(e.target.value)}
-          placeholder="Password"
-          className={inputBase}
-          {...inputFocus}
-        />
+      <form onSubmit={onSubmit} className="max-w-md mx-auto w-[min(90vw,28rem)]">
+        <motion.div {...inputFocus}>
+          <Input
+            type="password"
+            value={pwd}
+            onChange={(e) => setPwd(e.target.value)}
+            placeholder="Password"
+          />
+        </motion.div>
         {error && <div className="mt-2 text-sm text-red-400">{error}</div>}
-        <div className="mt-3">
-          <motion.button
-            type="submit"
-            disabled={!pwd || loading}
-            className={buttonPrimary}
-            {...buttonHoverTap}
-          >
+        <motion.div className="mt-4" {...buttonHoverTap}>
+          <Button type="submit" disabled={!pwd || loading}>
             {loading ? 'Signing in…' : 'Sign In'}
-          </motion.button>
-        </div>
+          </Button>
+        </motion.div>
       </form>
     </motion.div>
   );
