@@ -44,3 +44,26 @@ Docker
 - docker compose up --build
 - Frontend served on http://localhost:8080; backend on http://localhost:4000.
 - SQLite database stored in a named volume `notes_data` mounted at `/data/notes.db` in the backend container.
+
+Keyboard Navigation & Shortcuts
+
+- Notes View
+  - `Ctrl/⌘ + Space`: Open “New Note” modal.
+  - `Ctrl/⌘ + I`: Focus the search bar.
+  - `Esc`: Clear search and focus the search bar (when modal is closed).
+  - `Tab`: Move focus across notes; focused note shows a ring.
+  - `Arrow Up/Down`: Move focus between notes; on the top note, `Arrow Up` focuses the search bar.
+  - `Space` / `Enter`: Open the focused note.
+  - Focus and scroll position persist when navigating back from a note. Search text and caret position are also restored.
+
+- Create Note Modal
+  - Auto‑focus on the Title field when opened.
+  - `Ctrl/⌘ + Space` or `Enter` (on Title): Create the note (if Title not empty).
+  - `Esc`: Close the modal.
+  - `Arrow Up/Down`: Cycle focus: Title → Content → Create → Cancel → Title (wraps).
+
+- Note Detail
+  - `Ctrl/⌘ + Space`: View mode → enter edit. Edit mode → save.
+  - `Esc`: Edit mode → exit edit (back to detail). View mode → back to notes list.
+  - Edit mode auto‑focuses the Content field.
+  - `Arrow Up/Down` (edit mode): Cycle focus: Title → Content → Save → Cancel (wraps).
