@@ -41,3 +41,27 @@ export const buttonHoverTap: MotionProps = {
   whileTap: { scale: 0.98 },
   transition: { duration: 0.12 },
 };
+
+// Staggered list container for notes
+export const listStagger: MotionProps = {
+  initial: 'hidden',
+  animate: 'show',
+  exit: 'hidden',
+  variants: {
+    hidden: {},
+    show: {
+      transition: { staggerChildren: 0.06, delayChildren: 0.02 },
+    },
+  },
+};
+
+// Individual item zoom/opacity for staggered entrance
+export const listItemEnter: MotionProps = {
+  variants: {
+    hidden: { opacity: 0, scale: 0.985 },
+    show: { opacity: 1, scale: 1 },
+  },
+  exit: { opacity: 0, scale: 0.98 },
+  transition: { duration: 0.2, ease: 'easeOut' },
+  layout: true,
+};

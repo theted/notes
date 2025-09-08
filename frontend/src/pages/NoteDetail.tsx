@@ -18,6 +18,7 @@ import Input from '../components/ui/input';
 import Textarea from '../components/ui/textarea';
 import Button from '../components/ui/button';
 import { Dropdown, DropdownTrigger, DropdownContent, DropdownItem } from '../components/ui/dropdown';
+import Markdown from '../components/Markdown';
 
 const NoteDetail = () => {
   const { id } = useParams<{ id: string }>();
@@ -204,9 +205,7 @@ const NoteDetail = () => {
           transition={{ duration: 0.2 }}
         >
           <motion.h1 className={headline} {...headlineEnter}>{note.title}</motion.h1>
-          <pre className="whitespace-pre-wrap leading-7 text-gray-200 mt-6 font-sans">
-            {note.content}
-          </pre>
+          <Markdown content={note.content} />
           <div className="text-gray-400 mt-4 text-sm">
             Updated: {new Date(note.updatedAt).toLocaleString()}
           </div>

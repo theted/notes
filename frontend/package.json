@@ -11,20 +11,24 @@
   },
   "dependencies": {
     "@tanstack/react-query": "^5.59.0",
+    "framer-motion": "^11.0.0",
+    "highlight.js": "^11.11.1",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
+    "react-markdown": "^9.1.0",
     "react-router-dom": "^6.26.2",
-    "framer-motion": "^11.0.0"
+    "rehype-highlight": "^7.0.2",
+    "remark-gfm": "^4.0.1"
   },
   "devDependencies": {
+    "@tanstack/react-query-devtools": "^5.87.3",
     "@types/react": "^18.2.55",
     "@types/react-dom": "^18.2.19",
     "@typescript-eslint/eslint-plugin": "^7.18.0",
     "@typescript-eslint/parser": "^7.18.0",
     "@vitejs/plugin-react": "^4.3.1",
-    "eslint": "^8.57.0",
-    "@tanstack/react-query-devtools": "^5.59.0",
     "autoprefixer": "^10.4.20",
+    "eslint": "^8.57.0",
     "postcss": "^8.4.47",
     "tailwindcss": "^3.4.10",
     "typescript": "^5.6.2",

@@ -5,6 +5,14 @@ import OpenAI from 'openai';
 const personasDir = path.resolve(process.cwd(), 'src', 'personas');
 let cachedModel: string | null = null;
 
+// Remove accidental leading or trailing '---' separators and surrounding whitespace/BOM
+const cleanRemix = (s: string): string => {
+  return s
+    .replace(/^(?:\uFEFF)?\s*---\s*\n?/, '') // strip leading '---' line
+    .replace(/\n?\s*---\s*$/, '') // strip trailing '---' line
+    .trim();
+};
+
 const getModelCandidates = (): string[] => {
   const fromEnv = process.env.OPENAI_MODEL?.trim();
   const base = [
@@ -56,6 +64,8 @@ const basePrompt = `You are an expert text stylist. Your job is to rewrite a use
 - Overall meaning and intent
 - High-level structure and section order
 - Formatting and markup (especially Markdown headings, lists, code blocks)
+- Original language
+- Code inside code blocks (comments may be translated)
 Only output the rewritten content, without any extra commentary.`;
 
 export const remixContent = async (content: string, persona: string): Promise<string> => {
@@ -83,7 +93,10 @@ export const remixContent = async (content: string, persona: string): Promise<st
         temperature: 0.7,
       });
       const text = res.choices?.[0]?.message?.content ?? '';
-      if (text) return text.trim();
+      if (text) {
+        const cleaned = cleanRemix(text);
+        return cleaned;
+      }
       errors.push(`Cached model ${cachedModel} returned empty content.`);
     } catch (e) {
       errors.push(
@@ -109,7 +122,8 @@ export const remixContent = async (content: string, persona: string): Promise<st
       const text = res.choices?.[0]?.message?.content ?? '';
       if (text) {
         cachedModel = model; // remember working model
-        return text.trim();
+        const cleaned = cleanRemix(text);
+        return cleaned;
       }
       errors.push(`Model ${model} returned empty content.`);
     } catch (e) {

@@ -13,6 +13,7 @@ import TopBar from '../components/TopBar';
 import Input from '../components/ui/input';
 import Textarea from '../components/ui/textarea';
 import Button from '../components/ui/button';
+import Modal from '../components/ui/modal';
 
 const Home = () => {
   const [query, setQuery] = useState('');
@@ -30,6 +31,7 @@ const Home = () => {
 
   const [title, setTitle] = useState('');
   const [content, setContent] = useState('');
+  const [isNewOpen, setIsNewOpen] = useState(false);
   const canCreate = useMemo(() => title.trim().length > 0, [title]);
 
   const createMutation = useMutation({
@@ -57,6 +59,7 @@ const Home = () => {
     onSuccess: async () => {
       setTitle('');
       setContent('');
+      setIsNewOpen(false);
     },
     onSettled: async () => {
       await queryClient.invalidateQueries({ queryKey: ['notes'] });
@@ -78,10 +81,19 @@ const Home = () => {
     <>
       <TopBar
         left={<div className="text-2xl font-extralight tracking-tight">Notes</div>}
-        right={<Button variant="ghost" size="sm" onClick={logout}>Logout</Button>}
+        right={
+          <div className="flex items-center gap-2">
+            <Button size="sm" onClick={() => setIsNewOpen(true)}>
+              New
+            </Button>
+            <Button variant="ghost" size="sm" onClick={logout}>
+              Logout
+            </Button>
+          </div>
+        }
       />
       <motion.div
-        className={`${container} pt-24 min-h-[calc(100vh-4rem)] ${!query && !isLoading && (data?.length ?? 0) === 0 ? 'flex flex-col justify-center' : ''}`}
+        className={`${container} pt-32 md:pt-36 min-h-[calc(100vh-4rem)] ${!query && !isLoading && (data?.length ?? 0) === 0 ? 'flex flex-col justify-center' : ''}`}
         {...pageEnter}
       >
         <SearchBar value={query} onChange={setQuery} />
@@ -99,31 +111,37 @@ const Home = () => {
           )}
         </div>
 
-        <div className="my-10 h-px bg-white/10" />
-        <h2 className="text-2xl font-extralight tracking-tight mb-4">New Note</h2>
-        <motion.div {...inputFocus}>
-          <Input
-            value={title}
-            onChange={(e) => setTitle(e.target.value)}
-            onKeyDown={onTitleKeyDown}
-            placeholder="Title"
-          />
-        </motion.div>
-        <motion.div {...textareaFocus}>
-          <Textarea
-            value={content}
-            onChange={(e) => setContent(e.target.value)}
-            placeholder="Content"
-            rows={6}
-          />
-        </motion.div>
-        <div className="mt-4 flex items-center gap-4">
-          <motion.div {...(canCreate ? buttonHoverTap : {})}>
-            <Button disabled={!canCreate} onClick={onCreate} size="lg">
-              Create
-            </Button>
-          </motion.div>
-        </div>
+        {/* New Note Modal */}
+        <Modal open={isNewOpen} onOpenChange={setIsNewOpen} title="New Note">
+          <div>
+            <motion.div {...inputFocus}>
+              <Input
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
+                onKeyDown={onTitleKeyDown}
+                placeholder="Title"
+              />
+            </motion.div>
+            <motion.div {...textareaFocus}>
+              <Textarea
+                value={content}
+                onChange={(e) => setContent(e.target.value)}
+                placeholder="Content"
+                rows={8}
+              />
+            </motion.div>
+            <div className="mt-4 flex items-center gap-3 justify-end">
+              <Button variant="ghost" onClick={() => setIsNewOpen(false)}>
+                Cancel
+              </Button>
+              <motion.div {...(canCreate ? buttonHoverTap : {})}>
+                <Button disabled={!canCreate} onClick={onCreate}>
+                  Create
+                </Button>
+              </motion.div>
+            </div>
+          </div>
+        </Modal>
       </motion.div>
     </>
   );

@@ -7,3 +7,37 @@ html {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
+
+/* Global radial gradient backdrop */
+body {
+  position: relative;
+}
+
+/* Deep, dark blue-green radial glow anchored near bottom */
+body::before {
+  content: '';
+  position: fixed;
+  left: 50%;
+  top: 90%;
+  transform: translate(-50%, -50%);
+  width: 160vmax;
+  height: 140vmax;
+  pointer-events: none;
+  z-index: 0;
+  /* Core glow */
+  background: radial-gradient(
+      60% 45% at 50% 50%,
+      rgba(12, 72, 78, 0.28) 0%,
+      rgba(7, 44, 52, 0.20) 35%,
+      rgba(4, 24, 32, 0.12) 60%,
+      rgba(2, 12, 18, 0.08) 75%,
+      rgba(0, 0, 0, 0) 100%
+    );
+  filter: blur(0px);
+}
+
+/* Ensure app layers above the gradient */
+#root {
+  position: relative;
+  z-index: 1;
+}

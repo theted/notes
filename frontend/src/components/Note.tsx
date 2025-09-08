@@ -2,13 +2,13 @@ import React from 'react';
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import type { NoteListItem } from '../api';
-import { cardItem, hoverScaleSmall } from '../config/animations';
+import { hoverScaleSmall, listItemEnter } from '../config/animations';
 import { cardBase } from '../config/styles';
 
 type Props = { note: NoteListItem };
 
 const Note = ({ note }: Props) => (
-  <motion.li {...cardItem} className={cardBase}>
+  <motion.li {...listItemEnter} className={cardBase}>
     <motion.div {...hoverScaleSmall}>
       <Link to={`/notes/${note.id}`} className="block p-5">
         <div className="font-medium tracking-tight text-lg">{note.title}</div>
