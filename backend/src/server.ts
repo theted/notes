@@ -27,10 +27,35 @@ app.get('/api/notes', requirePassword, (req, res) => {
   const q = (req.query.q as string | undefined) || '';
   const notes = q.trim() ? searchNotes(q.trim(), userId) : listNotes(userId);
   // Send lightweight list payload with excerpt
+  const toExcerpt = (md: string): string => {
+    if (!md) return '';
+    // Remove fenced code blocks
+    let text = md.replace(/```[\s\S]*?```/g, ' ');
+    // Remove inline code
+    text = text.replace(/`[^`]*`/g, ' ');
+    // Images: keep alt text
+    text = text.replace(/!\[([^\]]*)\]\([^\)]*\)/g, '$1');
+    // Links: keep link text
+    text = text.replace(/\[([^\]]+)\]\([^\)]*\)/g, '$1');
+    // Headings at start of line
+    text = text.replace(/^(\s{0,3}#{1,6}\s*)/gm, '');
+    // Blockquotes
+    text = text.replace(/^(\s*>\s*)/gm, '');
+    // Bulleted/numbered lists
+    text = text.replace(/^(\s*[-*+]\s+)/gm, '');
+    text = text.replace(/^(\s*\d+\.\s+)/gm, '');
+    // Emphasis markers and tildes
+    text = text.replace(/[\*_~]{1,3}/g, '');
+    // Collapse whitespace/newlines
+    text = text.replace(/\s+/g, ' ').trim();
+    // Allow a longer summary
+    const MAX = 600;
+    return text.length > MAX ? text.slice(0, MAX).trimEnd() + '…' : text;
+  };
   const items = notes.map((n) => ({
     id: n.id,
     title: n.title,
-    excerpt: n.content.length > 160 ? n.content.slice(0, 160) + '…' : n.content,
+    excerpt: toExcerpt(n.content),
     updatedAt: n.updatedAt,
   }));
   res.json(items);
