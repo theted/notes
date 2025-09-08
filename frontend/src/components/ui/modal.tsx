@@ -38,6 +38,7 @@ const Modal: React.FC<ModalProps> = ({ open, onOpenChange, title, children, clas
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
+            transition={{ duration: 0.12 }}
             onClick={(e) => {
               if (e.target === overlayRef.current) onOpenChange(false);
             }}
@@ -55,7 +56,7 @@ const Modal: React.FC<ModalProps> = ({ open, onOpenChange, title, children, clas
               aria-modal="true"
               aria-label={title}
               className={cn(
-                'w-[min(720px,92vw)] rounded-2xl bg-zinc-950/95 ring-1 ring-white/10 shadow-2xl backdrop-blur p-5 md:p-6',
+                'w-[min(720px,92vw)] rounded-2xl bg-[#0e2a35]/95 ring-1 ring-white/10 shadow-2xl backdrop-blur p-5 md:p-6',
                 className,
               )}
               initial={{ opacity: 0, scale: 0.98, y: 8 }}

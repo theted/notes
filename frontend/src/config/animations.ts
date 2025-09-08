@@ -7,10 +7,26 @@ export const pageEnter: MotionProps = {
   transition: { duration: 0.25 },
 };
 
+// Content pages with slower fade-out for nicer logout transition
+export const pageEnterSlowExit: MotionProps = {
+  initial: { opacity: 0, y: 6 },
+  animate: { opacity: 1, y: 0 },
+  exit: { opacity: 0, y: 8, transition: { duration: 0.5 } },
+  transition: { duration: 0.25 },
+};
+
 export const headlineEnter: MotionProps = {
   initial: { opacity: 0, scale: 0.98 },
   animate: { opacity: 1, scale: 1 },
   transition: { duration: 0.25 },
+};
+
+// Login screen swooshy zoom-fade-in-up with a subtle spring/bounce
+export const loginSwoosh: MotionProps = {
+  initial: { opacity: 0, y: 24, scale: 0.96 },
+  animate: { opacity: 1, y: 0, scale: 1 },
+  exit: { opacity: 0, y: 10, scale: 0.99 },
+  transition: { type: 'spring', stiffness: 260, damping: 22, mass: 0.9 },
 };
 
 export const cardItem: MotionProps = {
@@ -50,7 +66,7 @@ export const listStagger: MotionProps = {
   variants: {
     hidden: {},
     show: {
-      transition: { staggerChildren: 0.06, delayChildren: 0.02 },
+      transition: { staggerChildren: 0.14, delayChildren: 0.08 },
     },
   },
 };
@@ -58,10 +74,10 @@ export const listStagger: MotionProps = {
 // Individual item zoom/opacity for staggered entrance
 export const listItemEnter: MotionProps = {
   variants: {
-    hidden: { opacity: 0, scale: 0.985 },
-    show: { opacity: 1, scale: 1 },
+    hidden: { opacity: 0, scale: 0.985, y: 8 },
+    show: { opacity: 1, scale: 1, y: 0 },
   },
-  exit: { opacity: 0, scale: 0.98 },
+  exit: { opacity: 0, scale: 0.98, y: 6 },
   transition: { duration: 0.2, ease: 'easeOut' },
   layout: true,
 };
