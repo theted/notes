@@ -69,8 +69,9 @@ A simple note-taking app.
 
 - Note Detail
   - `Ctrl/⌘ + Space`: View mode → enter edit. Edit mode → save.
-  - `Ctrl/⌘ + X`: Delete note (confirm dialog).
+  - `Ctrl/⌘ + X` (view mode): Delete note (confirm dialog).
+  - `Ctrl/⌘ + X` (edit mode): Insert Markdown code fence — adds "```javascript" before the cursor/selection and "```" after, placing the caret inside the fenced block.
   - `Esc`: Edit mode → exit edit (back to detail). View mode → back to notes list.
   - `Arrow Left`: Back to notes list (view mode).
-  - Edit mode auto‑focuses the Content field.
+  - Edit mode auto‑focuses the Content field and restores the last caret position per note (persisted locally). If unavailable, the caret moves to the end.
   - `Arrow Up/Down` (edit mode): Cycle focus: Title → Content → Save → Cancel (wraps).

@@ -24,6 +24,7 @@ body::before {
   height: 140vmax;
   pointer-events: none;
   z-index: 0;
+  opacity: 0;
   /* Core glow */
   background: radial-gradient(
       60% 45% at 50% 50%,
@@ -34,10 +35,26 @@ body::before {
       rgba(0, 0, 0, 0) 100%
     );
   filter: blur(0px);
+  animation: bg-fade-in 600ms ease-out 80ms forwards;
 }
 
 /* Ensure app layers above the gradient */
 #root {
   position: relative;
   z-index: 1;
+}
+
+/* Background fade-in animation on initial load */
+@keyframes bg-fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+/* Stronger pulse for remix skeleton */
+@keyframes pulse-strong {
+  0%, 100% { opacity: 0.35; }
+  50% { opacity: 1; }
+}
+.pulse-strong {
+  animation: pulse-strong 1.8s ease-in-out infinite;
 }

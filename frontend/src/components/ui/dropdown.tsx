@@ -8,12 +8,20 @@ type DropdownContextValue = {
 
 const DropdownContext = React.createContext<DropdownContextValue | null>(null);
 
-export const Dropdown: React.FC<{ children: React.ReactNode; className?: string } & React.HTMLAttributes<HTMLDivElement>> = ({
-  children,
-  className,
-  ...rest
-}) => {
-  const [open, setOpen] = React.useState(false);
+type DropdownProps = {
+  children: React.ReactNode;
+  className?: string;
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
+} & React.HTMLAttributes<HTMLDivElement>;
+
+export const Dropdown: React.FC<DropdownProps> = ({ children, className, open, onOpenChange, ...rest }) => {
+  const [innerOpen, setInnerOpen] = React.useState(false);
+  const isOpen = open ?? innerOpen;
+  const setOpen = (v: boolean) => {
+    if (onOpenChange) onOpenChange(v);
+    else setInnerOpen(v);
+  };
   const ref = React.useRef<HTMLDivElement>(null);
 
   React.useEffect(() => {
@@ -26,7 +34,7 @@ export const Dropdown: React.FC<{ children: React.ReactNode; className?: string 
   }, []);
 
   return (
-    <DropdownContext.Provider value={{ open, setOpen }}>
+    <DropdownContext.Provider value={{ open: isOpen, setOpen }}>
       <div ref={ref} className={cn('relative inline-block text-left', className)} {...rest}>
         {children}
       </div>
@@ -92,4 +100,3 @@ export const DropdownItem: React.FC<React.ButtonHTMLAttributes<HTMLButtonElement
 };
 
 export default Dropdown;
-
