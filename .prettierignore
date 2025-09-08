@@ -1,0 +1,17 @@
+node_modules
+dist
+build
+coverage
+.temp
+**/*.svg
+**/*.png
+**/*.jpg
+**/*.jpeg
+**/*.gif
+**/*.ico
+
+# lockfiles
+package-lock.json
+yarn.lock
+pnpm-lock.yaml
+
