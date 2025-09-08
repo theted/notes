@@ -52,3 +52,19 @@ export const deleteNote = async (id: number): Promise<void> => {
   const res = await fetch(`${BASE}/notes/${id}`, { method: 'DELETE', headers: withPassword() });
   if (!res.ok) throw new Error('Delete failed');
 };
+
+export const remixNote = async (id: number, persona: string): Promise<Note> => {
+  const res = await fetch(`${BASE}/notes/${id}/remix`, {
+    method: 'POST',
+    headers: withPassword({ 'Content-Type': 'application/json' }),
+    body: JSON.stringify({ persona }),
+  });
+  if (!res.ok) throw new Error('Remix failed');
+  return res.json();
+};
+
+export const fetchPersonas = async (): Promise<string[]> => {
+  const res = await fetch(`${BASE}/personas`);
+  if (!res.ok) throw new Error('Failed to fetch personas');
+  return res.json();
+};

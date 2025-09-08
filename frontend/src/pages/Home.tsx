@@ -1,7 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import { motion } from 'framer-motion';
 import { pageEnter, buttonHoverTap, inputFocus, textareaFocus } from '../config/animations';
-import { container, headline, inputBase, textareaBase, buttonPrimary } from '../config/styles';
+import { container, inputBase, textareaBase, buttonPrimary } from '../config/styles';
 import SearchBar from '../components/SearchBar';
 import NotesList from '../components/NotesList';
 import useDebounce from '../hooks/useDebounce';
@@ -9,6 +9,7 @@ import { createNote, fetchNotes, type NoteListItem } from '../api';
 import { useAuth } from '../auth/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient, keepPreviousData } from '@tanstack/react-query';
+import TopBar from '../components/TopBar';
 
 const Home = () => {
   const [query, setQuery] = useState('');
@@ -30,16 +31,32 @@ const Home = () => {
 
   const createMutation = useMutation({
     mutationFn: () => createNote(title.trim(), content),
-    onSuccess: async () => {
-      setTitle('');
-      setContent('');
-      // Invalidate all notes queries so list refetches
-      await queryClient.invalidateQueries({ queryKey: ['notes'] });
+    onMutate: async () => {
+      // Cancel outgoing fetches for any notes lists
+      await queryClient.cancelQueries({ queryKey: ['notes'] });
+      const key = ['notes', debounced] as const;
+      const previous = queryClient.getQueryData<NoteListItem[]>(key) ?? [];
+      const optimistic: NoteListItem = {
+        id: -Date.now(),
+        title: title.trim(),
+        excerpt: content.length > 160 ? content.slice(0, 160) + '…' : content,
+        updatedAt: new Date().toISOString(),
+      };
+      queryClient.setQueryData<NoteListItem[]>(key, [optimistic, ...previous]);
+      return { key, previous } as { key: readonly [string, string]; previous: NoteListItem[] };
     },
-    onError: () => {
+    onError: (_err, _vars, ctx) => {
+      if (ctx) queryClient.setQueryData(ctx.key, ctx.previous);
       alert('Create failed. You may need to login again.');
       logout();
       navigate('/login');
+    },
+    onSuccess: async () => {
+      setTitle('');
+      setContent('');
+    },
+    onSettled: async () => {
+      await queryClient.invalidateQueries({ queryKey: ['notes'] });
     },
   });
 
@@ -55,10 +72,16 @@ const Home = () => {
   };
 
   return (
-    <motion.div className={container} {...pageEnter}>
-      <header className="mb-8">
-        <h1 className={headline}>Notes</h1>
-      </header>
+    <>
+      <TopBar
+        left={<div className="text-2xl font-extralight tracking-tight">Notes</div>}
+        right={
+          <button onClick={logout} className="text-gray-300/80 hover:text-white transition px-2 py-1">
+            Logout
+          </button>
+        }
+      />
+      <motion.div className={`${container} pt-24`} {...pageEnter}>
       <SearchBar value={query} onChange={setQuery} />
       {(isFetching || isLoading) && <div className="mt-2 text-gray-400">Searching…</div>}
       {error && <div className="mt-3 text-red-400">{error}</div>}
@@ -93,16 +116,9 @@ const Home = () => {
         >
           Create
         </motion.button>
-        <div className="flex-1" />
-        <motion.button
-          onClick={logout}
-          className="px-3 py-1.5 rounded-lg bg-white/10 transition"
-          {...buttonHoverTap}
-        >
-          Logout
-        </motion.button>
       </div>
-    </motion.div>
+      </motion.div>
+    </>
   );
 };
 

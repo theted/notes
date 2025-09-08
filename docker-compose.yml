@@ -6,6 +6,8 @@ services:
       - PORT=4000
       - PASSWORD=${PASSWORD:-changeme}
       - DB_PATH=/data/notes.db
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - OPENAI_MODEL=${OPENAI_MODEL}
     volumes:
       - notes_data:/data
     ports:
