@@ -4,6 +4,7 @@ import { motion } from 'framer-motion';
 import type { NoteListItem } from '../api';
 import { hoverScaleSmall, listItemEnter } from '../config/animations';
 import { cardBase } from '../config/styles';
+import MarkdownExcerpt from './MarkdownExcerpt';
 
 type Props = { note: NoteListItem };
 
@@ -58,7 +59,7 @@ const Note = ({ note }: Props) => {
           }}
         >
           <div className="font-medium tracking-tight text-lg">{note.title}</div>
-          <div className="text-gray-400 mt-1 text-sm leading-6">{note.excerpt}</div>
+          <MarkdownExcerpt content={note.excerpt} />
           <div className="text-gray-500 mt-2 text-xs">
             Updated {new Date(note.updatedAt).toLocaleString()}
           </div>

@@ -29,28 +29,82 @@ app.get('/api/notes', requirePassword, (req, res) => {
   // Send lightweight list payload with excerpt
   const toExcerpt = (md: string): string => {
     if (!md) return '';
-    // Remove fenced code blocks
-    let text = md.replace(/```[\s\S]*?```/g, ' ');
-    // Remove inline code
-    text = text.replace(/`[^`]*`/g, ' ');
-    // Images: keep alt text
-    text = text.replace(/!\[([^\]]*)\]\([^\)]*\)/g, '$1');
-    // Links: keep link text
-    text = text.replace(/\[([^\]]+)\]\([^\)]*\)/g, '$1');
-    // Headings at start of line
-    text = text.replace(/^(\s{0,3}#{1,6}\s*)/gm, '');
-    // Blockquotes
-    text = text.replace(/^(\s*>\s*)/gm, '');
-    // Bulleted/numbered lists
-    text = text.replace(/^(\s*[-*+]\s+)/gm, '');
-    text = text.replace(/^(\s*\d+\.\s+)/gm, '');
-    // Emphasis markers and tildes
-    text = text.replace(/[\*_~]{1,3}/g, '');
-    // Collapse whitespace/newlines
-    text = text.replace(/\s+/g, ' ').trim();
-    // Allow a longer summary
-    const MAX = 600;
-    return text.length > MAX ? text.slice(0, MAX).trimEnd() + '…' : text;
+    let src = md;
+    // Strip raw HTML blocks for safety
+    src = src.replace(/<[^>]+>/g, '');
+    // Convert images to alt text
+    src = src.replace(/!\[([^\]]*)\]\([^\)]*\)/g, '$1');
+    // Links: keep text
+    src = src.replace(/\[([^\]]+)\]\([^\)]*\)/g, '$1');
+
+    // Identify fenced code blocks
+    type Block = { type: 'code' | 'text'; content: string; lang?: string };
+    const blocks: Block[] = [];
+    const fenceRe = /```([\w-]*)\n([\s\S]*?)```/g;
+    let lastIndex = 0;
+    let match: RegExpExecArray | null;
+    while ((match = fenceRe.exec(src))) {
+      const [full, lang, body] = match;
+      if (match.index > lastIndex) {
+        blocks.push({ type: 'text', content: src.slice(lastIndex, match.index) });
+      }
+      blocks.push({ type: 'code', content: body, lang: lang || undefined });
+      lastIndex = match.index + full.length;
+    }
+    if (lastIndex < src.length) {
+      blocks.push({ type: 'text', content: src.slice(lastIndex) });
+    }
+
+    // Build excerpt paragraphs while allowing an early/short code block
+    const paras: string[] = [];
+    const MAX_PARAS = 15;
+    const ALLOW_CODE_WITHIN_PARAS = 6; // allow keeping a code block if it appears within the first N paragraphs
+    const MAX_CODE_LINES = 80; // skip overly long code blocks
+    let paraCount = 0;
+    let seenCode = false;
+
+    const pushText = (t: string) => {
+      const chunks = t
+        .split(/\n{2,}/) // paragraphs by blank lines
+        .map((s) => s.trim())
+        .filter(Boolean);
+      for (const chunk of chunks) {
+        // soft-trim overly long list of bullets/numbers: keep first 20 lines
+        const lines = chunk.split(/\n/);
+        const trimmed = lines.length > 20 ? lines.slice(0, 20).join('\n') + '\n…' : chunk;
+        paras.push(trimmed);
+        paraCount++;
+        if (paraCount >= MAX_PARAS) return true;
+      }
+      return false;
+    };
+
+    for (const b of blocks) {
+      if (paraCount >= MAX_PARAS) break;
+      if (b.type === 'text') {
+        if (pushText(b.content)) break;
+      } else if (b.type === 'code') {
+        const codeLines = b.content.replace(/\s+$/,'').split(/\n/);
+        const shortEnough = codeLines.length <= MAX_CODE_LINES;
+        const earlyEnough = paraCount <= ALLOW_CODE_WITHIN_PARAS;
+        if (!seenCode && shortEnough && earlyEnough) {
+          seenCode = true;
+          paras.push(['```' + (b.lang || ''), ...codeLines, '```'].join('\n'));
+          paraCount++;
+        } else {
+          // skip or replace with ellipsis if it's early but too long
+          if (!seenCode && earlyEnough) {
+            paras.push('`…code omitted…`');
+            paraCount++;
+          }
+        }
+      }
+    }
+
+    const excerptMd = paras.join('\n\n').trim();
+    // As a guard, cap total characters
+    const MAX_CHARS = 4000;
+    return excerptMd.length > MAX_CHARS ? excerptMd.slice(0, MAX_CHARS).trimEnd() + '…' : excerptMd;
   };
   const items = notes.map((n) => ({
     id: n.id,
