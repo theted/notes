@@ -1,7 +1,19 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import OpenAI from 'openai';
+import {
+  DEFAULT_MODEL_CANDIDATES,
+  REMIX_TEMPERATURE,
+  PROBE_TEMPERATURE,
+  PROBE_MAX_TOKENS,
+  PROBE_SYSTEM_PROMPT,
+  PROBE_USER_PROMPT,
+  PROBE_OK_PATTERN,
+  REMIX_USER_INSTRUCTION,
+  BASE_PROMPT,
+} from './constants';
 
+// Derived paths and caches
 const personasDir = path.resolve(process.cwd(), 'src', 'personas');
 let cachedModel: string | null = null;
 
@@ -14,28 +26,8 @@ const cleanRemix = (s: string): string => {
 };
 
 const getModelCandidates = (): string[] => {
-  const fromEnv = process.env.OPENAI_MODEL?.trim();
-  const base = [
-    // Put env override first if provided
-    ...(fromEnv ? [fromEnv] : []),
-    // Preferred defaults (ordered)
-    'gpt-4o-mini',
-    'gpt-4o',
-    'gpt-4.1-mini',
-    'gpt-4.1',
-
-    // gpt-5
-    // gpt-5-mini
-    // gpt-5-nano
-    // gpt-4.1
-    // gpt-4.1-mini
-    // gpt-4.1-nano
-    // o3
-    // o4-mini
-    // gpt-4o
-    // gpt-4o-realtime-preview
-  ];
-  // Deduplicate while preserving order
+  const fromEnv = process.env['OPENAI_MODEL']?.trim();
+  const base = [...(fromEnv ? [fromEnv] : []), ...DEFAULT_MODEL_CANDIDATES];
   return Array.from(new Set(base));
 };
 
@@ -60,17 +52,36 @@ export const loadPersona = (name: string): string | null => {
   }
 };
 
-const basePrompt = `You are an expert text stylist. Your job is to rewrite a user's note by changing the TONE only, according to a given persona, while preserving:
-- Overall meaning and intent
-- High-level structure and section order
-- Formatting and markup (especially Markdown headings, lists, code blocks)
-- Original language
-- Code inside code blocks (comments may be translated)
-Only output the rewritten content, without any extra commentary.`;
+type Message = { role: 'system' | 'user' | 'assistant'; content: string };
+
+// Shared wrapper for chat.completions.create
+const runChatCompletion = (
+  client: OpenAI,
+  model: string,
+  messages: Message[],
+  options?: { temperature?: number; maxTokens?: number },
+) => {
+  const payload: any = {
+    model,
+    messages,
+  };
+  if (options?.temperature != null) payload.temperature = options.temperature;
+  if (options?.maxTokens != null) payload.max_tokens = options.maxTokens;
+  return client.chat.completions.create(payload);
+};
+
+const buildRemixMessages = (personaPrompt: string, content: string): Message[] => [
+  { role: 'system', content: BASE_PROMPT },
+  { role: 'system', content: personaPrompt },
+  {
+    role: 'user',
+    content: `${REMIX_USER_INSTRUCTION}\n\n---\n${content}`,
+  },
+];
 
 export const remixContent = async (content: string, persona: string): Promise<string> => {
   const apiKey = process.env.OPENAI_API_KEY;
-  if (!apiKey) throw new Error('OPENAI_API_KEY is not configured');
+  if (!apiKey) throw new Error(`OPENAI_API_KEY is not configured`);
   const prompt = loadPersona(persona);
   if (!prompt) throw new Error('Persona not found');
 
@@ -80,18 +91,12 @@ export const remixContent = async (content: string, persona: string): Promise<st
   // Try cached working model first
   if (cachedModel) {
     try {
-      const res = await client.chat.completions.create({
-        model: cachedModel,
-        messages: [
-          { role: 'system', content: basePrompt },
-          { role: 'system', content: prompt },
-          {
-            role: 'user',
-            content: `Rewrite the following note content in the persona's tone while keeping the structure and formatting.\n\n---\n${content}`,
-          },
-        ],
-        temperature: 0.7,
-      });
+      const res = await runChatCompletion(
+        client,
+        cachedModel,
+        buildRemixMessages(prompt, content),
+        { temperature: REMIX_TEMPERATURE },
+      );
       const text = res.choices?.[0]?.message?.content ?? '';
       if (text) {
         const cleaned = cleanRemix(text);
@@ -107,17 +112,8 @@ export const remixContent = async (content: string, persona: string): Promise<st
   }
   for (const model of getModelCandidates()) {
     try {
-      const res = await client.chat.completions.create({
-        model,
-        messages: [
-          { role: 'system', content: basePrompt },
-          { role: 'system', content: prompt },
-          {
-            role: 'user',
-            content: `Rewrite the following note content in the persona's tone while keeping the structure and formatting.\n\n---\n${content}`,
-          },
-        ],
-        temperature: 0.7,
+      const res = await runChatCompletion(client, model, buildRemixMessages(prompt, content), {
+        temperature: REMIX_TEMPERATURE,
       });
       const text = res.choices?.[0]?.message?.content ?? '';
       if (text) {
@@ -144,23 +140,23 @@ export const probeOpenAI = async (): Promise<{
   error?: string;
 }> => {
   const apiKey = process.env.OPENAI_API_KEY;
-  if (!apiKey) return { ok: false, error: 'Missing OPENAI_API_KEY' };
+  if (!apiKey) return { ok: false, error: `Missing OPENAI_API_KEY` };
   const client = new OpenAI({ apiKey });
   const errors: string[] = [];
   for (const model of getModelCandidates()) {
     try {
-      const res = await client.chat.completions.create({
+      const res = await runChatCompletion(
+        client,
         model,
-        messages: [
-          { role: 'system', content: basePrompt },
-          { role: 'system', content: 'You are concise.' },
-          { role: 'user', content: 'Reply with exactly: OK' },
+        [
+          { role: 'system', content: BASE_PROMPT },
+          { role: 'system', content: PROBE_SYSTEM_PROMPT },
+          { role: 'user', content: PROBE_USER_PROMPT },
         ],
-        temperature: 0,
-        max_tokens: 5,
-      });
+        { temperature: PROBE_TEMPERATURE, maxTokens: PROBE_MAX_TOKENS },
+      );
       const text = res.choices?.[0]?.message?.content ?? '';
-      if (/\bok\b/i.test(text)) {
+      if (PROBE_OK_PATTERN.test(text)) {
         cachedModel = model;
         return { ok: true, model, sample: text };
       }
