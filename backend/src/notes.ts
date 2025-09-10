@@ -1,16 +1,7 @@
-import { db } from './db';
 import type { Note, NoteInput } from './types';
+import { NoteModel } from './orm';
 
-type NoteRow = {
-  id: number;
-  title: string;
-  content: string;
-  user_id: number;
-  created_at: string;
-  updated_at: string;
-};
-
-const rowToNote = (row: NoteRow): Note => ({
+const rowToNote = (row: NoteModel): Note => ({
   id: row.id,
   title: row.title,
   content: row.content,
@@ -18,42 +9,33 @@ const rowToNote = (row: NoteRow): Note => ({
   updatedAt: row.updated_at,
 });
 
-export const getNote = (id: number, userId: number): Note | null => {
-  const row = db
-    .prepare<NoteRow>('SELECT * FROM notes WHERE id = ? AND user_id = ?')
-    .get(id, userId);
+export const getNote = async (id: number, userId: number): Promise<Note | null> => {
+  const row = await NoteModel.findOne({ where: { id, user_id: userId } });
   return row ? rowToNote(row) : null;
 };
 
-export const listNotes = (userId: number): Note[] => {
-  const rows = db
-    .prepare<NoteRow>('SELECT * FROM notes WHERE user_id = ? ORDER BY updated_at DESC')
-    .all(userId);
+export const listNotes = async (userId: number): Promise<Note[]> => {
+  const rows = await NoteModel.findAll({ where: { user_id: userId }, order: [['updated_at', 'DESC']] });
   return rows.map(rowToNote);
 };
 
-export const createNote = (input: NoteInput, userId: number): Note => {
-  const stmt = db.prepare('INSERT INTO notes (title, content, user_id) VALUES (?, ?, ?)');
-  const info = stmt.run(input.title, input.content, userId);
-  const row = db
-    .prepare<NoteRow>('SELECT * FROM notes WHERE id = ? AND user_id = ?')
-    .get(info.lastInsertRowid as number, userId)!;
+export const createNote = async (input: NoteInput, userId: number): Promise<Note> => {
+  const row = await NoteModel.create({ title: input.title, content: input.content, user_id: userId });
   return rowToNote(row);
 };
 
-export const updateNote = (id: number, input: NoteInput, userId: number): Note | null => {
-  const stmt = db.prepare('UPDATE notes SET title = ?, content = ? WHERE id = ? AND user_id = ?');
-  const result = stmt.run(input.title, input.content, id, userId);
-  if (result.changes === 0) return null;
-  const row = db
-    .prepare<NoteRow>('SELECT * FROM notes WHERE id = ? AND user_id = ?')
-    .get(id, userId)!;
+export const updateNote = async (id: number, input: NoteInput, userId: number): Promise<Note | null> => {
+  const row = await NoteModel.findOne({ where: { id, user_id: userId } });
+  if (!row) return null;
+  row.title = input.title;
+  row.content = input.content;
+  await row.save();
   return rowToNote(row);
 };
 
-export const deleteNote = (id: number, userId: number): boolean => {
-  const result = db.prepare('DELETE FROM notes WHERE id = ? AND user_id = ?').run(id, userId);
-  return result.changes > 0;
+export const deleteNote = async (id: number, userId: number): Promise<boolean> => {
+  const result = await NoteModel.destroy({ where: { id, user_id: userId } });
+  return result > 0;
 };
 
 // Simple fuzzy subsequence matcher with basic scoring (case-insensitive)
@@ -103,9 +85,9 @@ const looseScore = (query: string, title: string, content: string): number => {
   return score;
 };
 
-export const searchNotes = (query: string, userId: number): Note[] => {
-  const rows = db.prepare<NoteRow>('SELECT * FROM notes WHERE user_id = ?').all(userId);
-  type Scored = { row: NoteRow; score: number };
+export const searchNotes = async (query: string, userId: number): Promise<Note[]> => {
+  const rows = await NoteModel.findAll({ where: { user_id: userId } });
+  type Scored = { row: NoteModel; score: number };
 
   // Primary pass: subsequence match on title and content
   const primary: Scored[] = rows

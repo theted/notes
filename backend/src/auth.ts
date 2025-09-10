@@ -1,6 +1,6 @@
 import type { Request, Response, NextFunction } from 'express';
 import crypto from 'node:crypto';
-import { db } from './db';
+import { User } from './orm';
 
 // Middleware: derive or create user from password hash and attach userId to req
 export const requirePassword = (req: Request, res: Response, next: NextFunction) => {
@@ -8,13 +8,13 @@ export const requirePassword = (req: Request, res: Response, next: NextFunction)
   if (!pwd) return res.status(401).json({ error: 'Unauthorized' });
 
   const hash = crypto.createHash('sha256').update(pwd).digest('hex');
-  let user = db.prepare('SELECT id FROM users WHERE password_hash = ?').get(hash) as
-    | { id: number }
-    | undefined;
-  if (!user) {
-    const info = db.prepare('INSERT INTO users (password_hash) VALUES (?)').run(hash);
-    user = { id: Number(info.lastInsertRowid) };
-  }
-  (req as any).userId = user.id;
-  return next();
+  (async () => {
+    const [user] = await User.findOrCreate({ where: { password_hash: hash }, defaults: {} });
+    (req as any).userId = user.id;
+    return next();
+  })().catch((e) => {
+    // eslint-disable-next-line no-console
+    console.error('Auth error:', e);
+    return res.status(500).json({ error: 'Auth failed' });
+  });
 };

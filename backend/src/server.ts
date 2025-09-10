@@ -6,6 +6,7 @@ import { z } from 'zod';
 import { requirePassword } from './auth';
 import { createNote, deleteNote, getNote, listNotes, searchNotes, updateNote } from './notes';
 import { remixContent, listPersonas, probeOpenAI } from './ai';
+import { initDb } from './orm';
 
 const app = express();
 app.use(cors());
@@ -22,10 +23,10 @@ app.get('/api/auth', requirePassword, (req, res) => {
   res.json({ ok: true, userId });
 });
 
-app.get('/api/notes', requirePassword, (req, res) => {
+app.get('/api/notes', requirePassword, async (req, res) => {
   const userId = (req as any).userId as number;
   const q = (req.query.q as string | undefined) || '';
-  const notes = q.trim() ? searchNotes(q.trim(), userId) : listNotes(userId);
+  const notes = q.trim() ? await searchNotes(q.trim(), userId) : await listNotes(userId);
   // Send lightweight list payload with excerpt
   const toExcerpt = (md: string): string => {
     if (!md) return '';
@@ -115,11 +116,11 @@ app.get('/api/notes', requirePassword, (req, res) => {
   res.json(items);
 });
 
-app.get('/api/notes/:id', requirePassword, (req, res) => {
+app.get('/api/notes/:id', requirePassword, async (req, res) => {
   const userId = (req as any).userId as number;
   const id = Number(req.params.id);
   if (!Number.isFinite(id)) return res.status(400).json({ error: 'Invalid id' });
-  const note = getNote(id, userId);
+  const note = await getNote(id, userId);
   if (!note) return res.status(404).json({ error: 'Not found' });
   res.json(note);
 });
@@ -138,32 +139,32 @@ app.get('/api/ai/health', requirePassword, async (_req, res) => {
 
 const NoteSchema = z.object({ title: z.string().min(1), content: z.string().default('') });
 
-app.post('/api/notes', requirePassword, (req, res) => {
+app.post('/api/notes', requirePassword, async (req, res) => {
   const userId = (req as any).userId as number;
   const parse = NoteSchema.safeParse(req.body);
   if (!parse.success)
     return res.status(400).json({ error: 'Invalid payload', details: parse.error.flatten() });
-  const note = createNote(parse.data, userId);
+  const note = await createNote(parse.data, userId);
   res.status(201).json(note);
 });
 
-app.put('/api/notes/:id', requirePassword, (req, res) => {
+app.put('/api/notes/:id', requirePassword, async (req, res) => {
   const userId = (req as any).userId as number;
   const id = Number(req.params.id);
   if (!Number.isFinite(id)) return res.status(400).json({ error: 'Invalid id' });
   const parse = NoteSchema.safeParse(req.body);
   if (!parse.success)
     return res.status(400).json({ error: 'Invalid payload', details: parse.error.flatten() });
-  const note = updateNote(id, parse.data, userId);
+  const note = await updateNote(id, parse.data, userId);
   if (!note) return res.status(404).json({ error: 'Not found' });
   res.json(note);
 });
 
-app.delete('/api/notes/:id', requirePassword, (req, res) => {
+app.delete('/api/notes/:id', requirePassword, async (req, res) => {
   const userId = (req as any).userId as number;
   const id = Number(req.params.id);
   if (!Number.isFinite(id)) return res.status(400).json({ error: 'Invalid id' });
-  const ok = deleteNote(id, userId);
+  const ok = await deleteNote(id, userId);
   if (!ok) return res.status(404).json({ error: 'Not found' });
   res.status(204).end();
 });
@@ -177,11 +178,11 @@ app.post('/api/notes/:id/remix', requirePassword, async (req, res) => {
   const parse = Schema.safeParse(req.body);
   if (!parse.success)
     return res.status(400).json({ error: 'Invalid payload', details: parse.error.flatten() });
-  const current = getNote(id, userId);
+  const current = await getNote(id, userId);
   if (!current) return res.status(404).json({ error: 'Not found' });
   try {
     const remixed = await remixContent(current.content, parse.data.persona);
-    const updated = updateNote(id, { title: current.title, content: remixed }, userId);
+    const updated = await updateNote(id, { title: current.title, content: remixed }, userId);
     if (!updated) return res.status(500).json({ error: 'Failed to update' });
     res.json(updated);
   } catch (e) {
@@ -194,6 +195,12 @@ const PORT = Number(process.env.PORT || 4000);
 app.listen(PORT, async () => {
   // eslint-disable-next-line no-console
   console.log(`API listening on http://localhost:${PORT}`);
+  // Initialize ORM and DB
+  try {
+    await initDb();
+  } catch (e) {
+    console.error('Failed to init DB:', e);
+  }
   // Optional: probe OpenAI once on startup (non-fatal)
   if (process.env.AI_STARTUP_CHECK && process.env.OPENAI_API_KEY) {
     try {

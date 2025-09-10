@@ -12,7 +12,7 @@ A simple note-taking app.
 
 ### Stack
 
-- Backend: Node.js + Express + SQLite (better-sqlite3), TypeScript.
+- Backend: Node.js + Express + SQLite, TypeScript. Data layer via Sequelize ORM (SQLite dialect).
 - Frontend: React + Vite + TypeScript, React Router.
 - Tooling: ESLint.
 - Docker: docker-compose for backend and frontend; SQLite stored on a volume.
