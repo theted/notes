@@ -14,6 +14,7 @@ import Input from '../components/ui/input';
 import Textarea from '../components/ui/textarea';
 import Button from '../components/ui/button';
 import Modal from '../components/ui/modal';
+import Spinner from '../components/ui/spinner';
 
 const Home = () => {
   const [query, setQuery] = useState<string>(() => sessionStorage.getItem('notesQuery') ?? '');
@@ -316,7 +317,12 @@ const Home = () => {
           />
         ) : null}
         {isLoading && !(data && data.length > 0) && (
-          <div className="mt-2 text-gray-400">Loading…</div>
+          <div className="mt-2 text-gray-400">
+            <div className="inline-flex items-center gap-2">
+              <Spinner size="sm" center={false} />
+              <span>Loading…</span>
+            </div>
+          </div>
         )}
         {error && <div className="mt-3 text-red-400">{error}</div>}
         <div className="mt-6">

@@ -13,6 +13,7 @@ import Textarea from '../components/ui/textarea';
 import Button from '../components/ui/button';
 import { Dropdown, DropdownTrigger, DropdownContent, DropdownItem } from '../components/ui/dropdown';
 import Markdown from '../components/Markdown';
+import Spinner from '../components/ui/spinner';
 
 const NoteDetail = () => {
   const { id } = useParams<{ id: string }>();
@@ -248,7 +249,7 @@ const NoteDetail = () => {
   };
 
   if (error) return <div className="p-6">Error: {error}</div>;
-  if (!note && (isLoading || isFetching)) return <div className="p-6">Loading…</div>;
+  if (!note && (isLoading || isFetching)) return <Spinner size="md" />;
   if (!note) return <div className="p-6">Not found</div>;
 
   return (
@@ -501,7 +502,7 @@ const NoteDetail = () => {
             </Dropdown>
             {personasLoading && (
               <div className="flex items-center gap-2 text-gray-400 text-sm">
-                <span className="inline-block h-4 w-4 rounded-full border-2 border-white/20 border-t-transparent animate-spin" />
+                <Spinner size="sm" center={false} />
                 <span>Loading personas…</span>
               </div>
             )}
@@ -510,7 +511,7 @@ const NoteDetail = () => {
             )}
             {isRemixing && (
               <div className="flex items-center gap-2 text-gray-400 text-sm">
-                <span className="inline-block h-4 w-4 rounded-full border-2 border-white/20 border-t-transparent animate-spin" />
+                <Spinner size="sm" center={false} />
                 <span>Transforming…</span>
               </div>
             )}
