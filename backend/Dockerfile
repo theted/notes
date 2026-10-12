@@ -14,6 +14,8 @@ ENV DB_PATH=/data/notes.db
 COPY package.json ./
 RUN npm install --omit=dev
 COPY --from=builder /app/dist ./dist
+# Read at runtime from <cwd>/src/personas (see ai.ts)
+COPY src/personas ./src/personas
 EXPOSE 4000
 VOLUME ["/data"]
 CMD ["node", "dist/server.js"]
