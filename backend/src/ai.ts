@@ -11,7 +11,7 @@ import {
   PROBE_OK_PATTERN,
   REMIX_USER_INSTRUCTION,
   BASE_PROMPT,
-} from './constants';
+} from './constants.js';
 
 // Derived paths and caches
 const personasDir = path.resolve(process.cwd(), 'src', 'personas');

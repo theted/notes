@@ -1,4 +1,11 @@
-import { Sequelize, DataTypes, Model, InferAttributes, InferCreationAttributes, CreationOptional } from 'sequelize';
+import {
+  Sequelize,
+  DataTypes,
+  Model,
+  InferAttributes,
+  InferCreationAttributes,
+  CreationOptional,
+} from 'sequelize';
 import path from 'node:path';
 import fs from 'node:fs';
 import crypto from 'node:crypto';
@@ -22,12 +29,19 @@ User.init(
   {
     id: { type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true },
     password_hash: { type: DataTypes.STRING, allowNull: false, unique: true },
-    created_at: { type: DataTypes.TEXT, allowNull: false, defaultValue: Sequelize.literal("datetime('now')") },
+    created_at: {
+      type: DataTypes.TEXT,
+      allowNull: false,
+      defaultValue: Sequelize.literal("(datetime('now'))"),
+    },
   },
   { sequelize, tableName: 'users', timestamps: false, underscored: true },
 );
 
-export class NoteModel extends Model<InferAttributes<NoteModel>, InferCreationAttributes<NoteModel>> {
+export class NoteModel extends Model<
+  InferAttributes<NoteModel>,
+  InferCreationAttributes<NoteModel>
+> {
   declare id: CreationOptional<number>;
   declare title: string;
   declare content: string;
@@ -42,8 +56,16 @@ NoteModel.init(
     title: { type: DataTypes.TEXT, allowNull: false },
     content: { type: DataTypes.TEXT, allowNull: false },
     user_id: { type: DataTypes.INTEGER, allowNull: false },
-    created_at: { type: DataTypes.TEXT, allowNull: false, defaultValue: Sequelize.literal("datetime('now')") },
-    updated_at: { type: DataTypes.TEXT, allowNull: false, defaultValue: Sequelize.literal("datetime('now')") },
+    created_at: {
+      type: DataTypes.TEXT,
+      allowNull: false,
+      defaultValue: Sequelize.literal("(datetime('now'))"),
+    },
+    updated_at: {
+      type: DataTypes.TEXT,
+      allowNull: false,
+      defaultValue: Sequelize.literal("(datetime('now'))"),
+    },
   },
   {
     sequelize,
@@ -68,11 +90,18 @@ export const initDb = async () => {
   // Ensure default user exists for backwards-compat with existing env PASSWORD
   const DEFAULT_PASSWORD = process.env.PASSWORD || 'changeme';
   const defaultHash = crypto.createHash('sha256').update(DEFAULT_PASSWORD).digest('hex');
-  const [user] = await User.findOrCreate({ where: { password_hash: defaultHash }, defaults: {} });
+  const [user] = await User.findOrCreate({
+    where: { password_hash: defaultHash },
+    defaults: { password_hash: defaultHash },
+  });
 
   // Seed a note if empty
   const count = await NoteModel.count();
   if (count === 0) {
-    await NoteModel.create({ title: 'Welcome to Notes', content: 'This is your first note. Start typing!', user_id: user.id });
+    await NoteModel.create({
+      title: 'Welcome to Notes',
+      content: 'This is your first note. Start typing!',
+      user_id: user.id,
+    });
   }
 };

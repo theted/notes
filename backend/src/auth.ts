@@ -1,6 +1,6 @@
 import type { Request, Response, NextFunction } from 'express';
 import crypto from 'node:crypto';
-import { User } from './orm';
+import { User } from './orm.js';
 
 // Middleware: derive or create user from password hash and attach userId to req
 export const requirePassword = (req: Request, res: Response, next: NextFunction) => {
@@ -9,7 +9,10 @@ export const requirePassword = (req: Request, res: Response, next: NextFunction)
 
   const hash = crypto.createHash('sha256').update(pwd).digest('hex');
   (async () => {
-    const [user] = await User.findOrCreate({ where: { password_hash: hash }, defaults: {} });
+    const [user] = await User.findOrCreate({
+      where: { password_hash: hash },
+      defaults: { password_hash: hash },
+    });
     (req as any).userId = user.id;
     return next();
   })().catch((e) => {
