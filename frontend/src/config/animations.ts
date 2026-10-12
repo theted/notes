@@ -1,4 +1,4 @@
-import type { MotionProps } from 'framer-motion';
+import type { MotionProps, Transition, Variants } from 'framer-motion';
 
 export const pageEnter: MotionProps = {
   initial: { opacity: 0, y: 6 },
@@ -21,12 +21,67 @@ export const headlineEnter: MotionProps = {
   transition: { duration: 0.25 },
 };
 
-// Login screen swooshy zoom-fade-in-up with a subtle spring/bounce
-export const loginSwoosh: MotionProps = {
-  initial: { opacity: 0, y: 24, scale: 0.96 },
-  animate: { opacity: 1, y: 0, scale: 1 },
-  exit: { opacity: 0, y: 10, scale: 0.99 },
-  transition: { type: 'spring', stiffness: 260, damping: 22, mass: 0.9 },
+// Splash: one orchestrated load sequence; children enter in turn
+export const splashSequence: MotionProps = {
+  initial: 'hidden',
+  animate: 'show',
+  variants: {
+    hidden: {},
+    show: { transition: { staggerChildren: 0.12, delayChildren: 0.1 } },
+  },
+};
+
+// Splash: everything leaves together, blurred, when the notebook opens
+export const splashLeave: MotionProps = {
+  exit: { opacity: 0, y: -8, filter: 'blur(6px)', transition: { duration: 0.35, ease: 'easeIn' } },
+};
+
+// Splash: swooshy fade-in-up with a subtle spring
+export const splashItem: MotionProps = {
+  variants: {
+    hidden: { opacity: 0, y: 18, scale: 0.98 },
+    show: {
+      opacity: 1,
+      y: 0,
+      scale: 1,
+      transition: { type: 'spring', stiffness: 260, damping: 24, mass: 0.9 },
+    },
+  },
+};
+
+// Remixing headline: words blur out upward, the next voice's words blur in from below.
+// `custom` delays the first line, so it lands after the wordmark on page load.
+export const remixLine: Variants = {
+  hidden: {},
+  show: (delay: number = 0) => ({ transition: { staggerChildren: 0.035, delayChildren: delay } }),
+  leave: { transition: { staggerChildren: 0.02 } },
+};
+
+export const remixWord: Variants = {
+  hidden: { opacity: 0, y: '0.35em', filter: 'blur(10px)' },
+  show: {
+    opacity: 1,
+    y: '0em',
+    filter: 'blur(0px)',
+    transition: { duration: 0.5, ease: [0.22, 1, 0.36, 1] },
+  },
+  leave: {
+    opacity: 0,
+    y: '-0.25em',
+    filter: 'blur(8px)',
+    transition: { duration: 0.2, ease: 'easeIn' },
+  },
+};
+
+// Active-voice pill sliding between chips (shared layoutId)
+export const pillSlide: Transition = { type: 'spring', stiffness: 380, damping: 32 };
+
+// Voice-tinted glow crossfade behind the headline
+export const glowFade: MotionProps = {
+  initial: { opacity: 0 },
+  animate: { opacity: 1 },
+  exit: { opacity: 0 },
+  transition: { duration: 1.2, ease: 'easeInOut' },
 };
 
 export const cardItem: MotionProps = {
