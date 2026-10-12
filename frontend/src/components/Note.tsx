@@ -2,23 +2,28 @@ import React from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import type { NoteListItem } from '../api';
-import { hoverScaleSmall, listItemEnter } from '../config/animations';
-import { cardBase } from '../config/styles';
+import { cardLift, listItemEnter } from '../config/animations';
+import { noteCard } from '../config/styles';
 import MarkdownExcerpt from './MarkdownExcerpt';
 
 type Props = { note: NoteListItem };
 
+// Feeds the card's spotlight its position
+const trackPointer = (e: React.PointerEvent<HTMLElement>) => {
+  const { left, top } = e.currentTarget.getBoundingClientRect();
+  e.currentTarget.style.setProperty('--x', `${e.clientX - left}px`);
+  e.currentTarget.style.setProperty('--y', `${e.clientY - top}px`);
+};
+
 const Note = ({ note }: Props) => {
   const navigate = useNavigate();
   return (
-    <motion.li
-      {...listItemEnter}
-      className={`${cardBase} transition-colors duration-200 hover:bg-white/10 focus-within:bg-white/10 focus-within:ring-2 focus-within:ring-indigo-400/60`}
-    >
-      <motion.div {...hoverScaleSmall}>
+    <motion.li {...listItemEnter}>
+      <motion.div {...cardLift}>
         <Link
           to={`/notes/${note.id}`}
-          className="block p-5 focus-visible:outline-none"
+          className={noteCard}
+          onPointerMove={trackPointer}
           data-note-link
           data-id={String(note.id)}
           onFocus={() => sessionStorage.setItem('notesFocus', `note:${note.id}`)}
@@ -44,7 +49,9 @@ const Note = ({ note }: Props) => {
                   const prev = links[idx - 1];
                   if (prev) prev.focus();
                   else {
-                    const search = document.getElementById('notes-search') as HTMLInputElement | null;
+                    const search = document.getElementById(
+                      'notes-search',
+                    ) as HTMLInputElement | null;
                     if (search) search.focus();
                   }
                 }
@@ -58,10 +65,13 @@ const Note = ({ note }: Props) => {
             }
           }}
         >
-          <div className="font-medium tracking-tight text-lg">{note.title}</div>
-          <MarkdownExcerpt content={note.excerpt} />
-          <div className="text-gray-500 mt-2 text-xs">
-            Updated {new Date(note.updatedAt).toLocaleString()}
+          {/* Above the spotlight */}
+          <div className="relative">
+            <div className="text-xl font-light tracking-tight text-white">{note.title}</div>
+            <MarkdownExcerpt content={note.excerpt} />
+            <div className="text-gray-500 mt-3 text-xs">
+              Updated {new Date(note.updatedAt).toLocaleString()}
+            </div>
           </div>
         </Link>
       </motion.div>

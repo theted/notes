@@ -21,9 +21,9 @@ This document explains the repo structure, coding style, conventions, and daily 
 - `frontend/`
   - `src/main.tsx`: Router + Auth provider bootstrap.
   - `src/pages/`: `Home.tsx`, `NoteDetail.tsx`, `Splash.tsx` (sign-in landing page at `/login`).
-  - `src/components/`: `SearchBar.tsx`, `NotesList.tsx`, `Note.tsx`.
+  - `src/components/`: `SearchBar.tsx`, `NotesList.tsx`, `Note.tsx`, plus the shared motion pieces: `Page.tsx` (every page's enter/leave choreography), `Aurora.tsx` (drifting background behind signed-in pages), `BlurWords.tsx`, `VoiceGlow.tsx`, `VoiceChips.tsx`.
   - `src/auth/`: `AuthContext.tsx`, `RequireAuth.tsx`.
-  - `src/config/`: `animations.ts`, `styles.ts` (central motion presets + Tailwind tokens).
+  - `src/config/`: `animations.ts`, `styles.ts` (central motion presets + Tailwind tokens), `voices.ts` (remix personas with their labels, splash lines and glow tints).
   - `src/hooks/`: `useDebounce.ts`.
   - `src/api.ts`: API wrapper; pulls `VITE_API_BASE` or uses `/api`.
   - Tailwind + Vite config: `tailwind.config.cjs`, `postcss.config.cjs`, `vite.config.ts`.
@@ -50,8 +50,10 @@ This document explains the repo structure, coding style, conventions, and daily 
   - Reuse tokens from `styles.ts` and spread animation presets from `animations.ts`.
   - Dark, rounded, minimal; thin headlines (`font-extralight`) and subtle motion.
 - Animations (Framer Motion):
-  - Use exported presets: `pageEnter`, `headlineEnter`, `cardItem`, `inputFocus`, `buttonHoverTap`.
-  - Favor quick, subtle transitions. Respect reduced motion if added later.
+  - Wrap page content in `Page` and spread `enterItem` on its blocks so they rise in turn; keep fixed layers (`TopBar`, `Modal`) outside it.
+  - Headlines blur in word by word: `variants={remixLine}` on the heading, `BlurWords` inside.
+  - Other presets: `listItemEnter`, `cardLift`, `contentSwap`, `dialogEnter`, `inputFocus`, `buttonHoverTap`.
+  - Ambient loops (aurora drift, sweeps) are Tailwind keyframes behind `motion-safe:`; Framer Motion follows the OS setting via the app-wide `MotionConfig reducedMotion="user"`.
 - Auth:
   - Password lives in `localStorage` under `password`.
   - All requests include `X-Password` header (see `api.ts`).
@@ -84,9 +86,7 @@ This document explains the repo structure, coding style, conventions, and daily 
 
 ## Extension Ideas
 
-- Add route‑level `<AnimatePresence mode="wait">` for cross‑page fades.
 - SQLite FTS5 for search with ranking instead of JS fuzzy.
-- Reduced motion support in `animations.ts`.
 - Basic tests for search and CRUD.
 
 ---

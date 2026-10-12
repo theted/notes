@@ -1,6 +1,7 @@
 import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '../../lib/utils';
+import { dialogEnter } from '../../config/animations';
 
 type ModalProps = {
   open: boolean;
@@ -34,7 +35,7 @@ const Modal: React.FC<ModalProps> = ({ open, onOpenChange, title, children, clas
         <div className="fixed inset-0 z-[1000]">
           <motion.div
             ref={overlayRef}
-            className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+            className="absolute inset-0 bg-black/50 backdrop-blur-sm"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
@@ -56,16 +57,15 @@ const Modal: React.FC<ModalProps> = ({ open, onOpenChange, title, children, clas
               aria-modal="true"
               aria-label={title}
               className={cn(
-                'w-[min(720px,92vw)] rounded-2xl bg-[#0e2a35]/95 ring-1 ring-white/10 shadow-2xl backdrop-blur p-5 md:p-6',
+                'w-[min(720px,92vw)] rounded-2xl bg-ink/80 ring-1 ring-white/10 shadow-[0_40px_120px_-40px_rgba(99,102,241,0.6)] backdrop-blur-2xl p-5 md:p-6',
                 className,
               )}
-              initial={{ opacity: 0, scale: 0.98, y: 8 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.985, y: 8 }}
-              transition={{ duration: 0.18, ease: 'easeOut' }}
+              {...dialogEnter}
             >
               {title ? (
-                <div className="text-xl font-light tracking-tight mb-3 text-white">{title}</div>
+                <div className="text-2xl font-extralight tracking-tight mb-3 text-white">
+                  {title}
+                </div>
               ) : null}
               {children}
             </motion.div>

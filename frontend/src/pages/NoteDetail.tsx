@@ -1,19 +1,35 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { deleteNote, fetchNote, updateNote, remixNote, fetchPersonas, type Note } from '../api';
 import type { NoteListItem } from '../api';
 import { AnimatePresence, motion } from 'framer-motion';
-import { pageEnterSlowExit as pageEnter, buttonHoverTap, inputFocus, textareaFocus, headlineEnter } from '../config/animations';
-import { container, headline } from '../config/styles';
+import {
+  enterItem,
+  remixLine,
+  contentSwap,
+  buttonHoverTap,
+  inputFocus,
+  textareaFocus,
+} from '../config/animations';
+import { column, pageHeadline, sweep } from '../config/styles';
+import { PLAIN, VOICES, voiceFor } from '../config/voices';
+import { cn } from '../lib/utils';
+import Page from '../components/Page';
+import BlurWords from '../components/BlurWords';
+import VoiceGlow from '../components/VoiceGlow';
+import VoiceChips from '../components/VoiceChips';
 import { useAuth } from '../auth/AuthContext';
 import TopBar from '../components/TopBar';
 import { useMutation, useQuery, useQueryClient, keepPreviousData } from '@tanstack/react-query';
 import Input from '../components/ui/input';
 import Textarea from '../components/ui/textarea';
 import Button from '../components/ui/button';
-import { Dropdown, DropdownTrigger, DropdownContent, DropdownItem } from '../components/ui/dropdown';
 import Markdown from '../components/Markdown';
 import Spinner from '../components/ui/spinner';
+
+// "Original" puts back the note as it was before this visit's remixes
+const ORIGINAL = { ...PLAIN, label: 'Original' };
+const DEFAULT_PERSONAS = VOICES.slice(1).map((v) => v.id);
 
 const NoteDetail = () => {
   const { id } = useParams<{ id: string }>();
@@ -23,25 +39,25 @@ const NoteDetail = () => {
   const [title, setTitle] = useState('');
   const [content, setContent] = useState('');
   const [originalContent, setOriginalContent] = useState<string | null>(null);
-  const [persona, setPersona] = useState<string>('');
-  const [isRemixing, setIsRemixing] = useState(false);
-  const [remixOpen, setRemixOpen] = useState(false);
+  const [voiceId, setVoiceId] = useState(PLAIN.id);
   const [error] = useState<string | null>(null);
   const { logout } = useAuth();
-  const contentRef = useRef<HTMLDivElement | null>(null);
-  const [skeletonHeight, setSkeletonHeight] = useState<number>(0);
   const editTitleRef = useRef<HTMLInputElement | null>(null);
   const editContentRef = useRef<HTMLTextAreaElement | null>(null);
   const saveRef = useRef<HTMLButtonElement | null>(null);
   const cancelRef = useRef<HTMLButtonElement | null>(null);
 
   const queryClient = useQueryClient();
-  const { data: note, isFetching, isLoading } = useQuery<Note>({
+  const {
+    data: note,
+    isFetching,
+    isLoading,
+  } = useQuery<Note>({
     queryKey: ['note', noteId],
     queryFn: () => fetchNote(noteId),
     placeholderData: keepPreviousData,
   });
-  const { data: personas, isLoading: personasLoading } = useQuery<string[]>({
+  const { data: personas } = useQuery<string[]>({
     queryKey: ['personas'],
     queryFn: fetchPersonas,
     staleTime: 60 * 60 * 1000,
@@ -74,7 +90,10 @@ const NoteDetail = () => {
       // Optimistically remove from notes lists
       prevLists.forEach(([key, list]) => {
         if (!list) return;
-        queryClient.setQueryData<NoteListItem[]>(key as unknown as readonly [string, string], list.filter((n) => n.id !== noteId));
+        queryClient.setQueryData<NoteListItem[]>(
+          key as unknown as readonly [string, string],
+          list.filter((n) => n.id !== noteId),
+        );
       });
       // Clear note cache
       queryClient.removeQueries({ queryKey: ['note', noteId] });
@@ -84,10 +103,7 @@ const NoteDetail = () => {
       // Rollback
       if (ctx?.prevNote) queryClient.setQueryData(['note', noteId], ctx.prevNote);
       ctx?.prevLists.forEach(([key, list]) =>
-        queryClient.setQueryData<NoteListItem[]>(
-          key as unknown as readonly [string, string],
-          list,
-        ),
+        queryClient.setQueryData<NoteListItem[]>(key as unknown as readonly [string, string], list),
       );
       alert('Delete failed. You may need to login again.');
       logout();
@@ -143,7 +159,8 @@ const NoteDetail = () => {
       }
 
       // Ctrl/Cmd + X to delete (view mode only)
-      const isCtrlX = (e.ctrlKey || e.metaKey) && (e.code === 'KeyX' || e.key.toLowerCase() === 'x');
+      const isCtrlX =
+        (e.ctrlKey || e.metaKey) && (e.code === 'KeyX' || e.key.toLowerCase() === 'x');
       if (!editing && isCtrlX) {
         e.preventDefault();
         void onDelete();
@@ -212,32 +229,19 @@ const NoteDetail = () => {
     };
   }, [editing, noteId, editContentRef.current]);
 
-  
-
   const remixMutation = useMutation({
     mutationFn: (p: string) => remixNote(noteId, p),
-    onMutate: async (p) => {
-      setIsRemixing(true);
-      // Measure current content height to size skeleton overlay
-      requestAnimationFrame(() => {
-        const el = contentRef.current;
-        if (el) {
-          const h = el.offsetHeight;
-          setSkeletonHeight(Math.max(160, h));
-        }
-      });
-      if (originalContent == null && note) setOriginalContent(note.content);
-      return p;
-    },
-    onSuccess: (n) => {
+    onMutate: () => ({ before: note?.content ?? '' }),
+    onSuccess: (n, _p, ctx) => {
+      setOriginalContent((prev) => prev ?? ctx?.before ?? null);
       queryClient.setQueryData(['note', noteId], n);
       queryClient.invalidateQueries({ queryKey: ['notes'] });
     },
     onError: () => {
       alert('Remix failed.');
     },
-    onSettled: () => setIsRemixing(false),
   });
+  const isRemixing = remixMutation.isPending;
 
   const onUndo = async () => {
     if (originalContent == null || !note) return;
@@ -248,6 +252,21 @@ const NoteDetail = () => {
     setOriginalContent(null);
   };
 
+  const pickVoice = (id: string) => {
+    if (id === voiceId) return;
+    const prev = voiceId;
+    setVoiceId(id);
+    if (id === PLAIN.id)
+      onUndo().catch(() => {
+        setVoiceId(prev);
+        alert("Couldn't restore the original.");
+      });
+    else remixMutation.mutate(id, { onError: () => setVoiceId(prev) });
+  };
+
+  const voice = voiceFor(voiceId);
+  const voices = [ORIGINAL, ...(personas ?? DEFAULT_PERSONAS).map(voiceFor)];
+
   if (error) return <div className="p-6">Error: {error}</div>;
   if (!note && (isLoading || isFetching)) return <Spinner size="md" />;
   if (!note) return <div className="p-6">Not found</div>;
@@ -255,13 +274,18 @@ const NoteDetail = () => {
   return (
     <>
       <TopBar
-        left={<Link to="/" className="text-gray-300 hover:text-white transition">← Back</Link>}
+        left={
+          <Link to="/" className="text-gray-300 hover:text-white transition">
+            ← Back
+          </Link>
+        }
         right={
           <>
             {!editing && (
               <motion.div {...buttonHoverTap}>
                 <Button
                   variant="ghost"
+                  size="sm"
                   onClick={() => {
                     setTitle(note?.title ?? '');
                     setContent(note?.content ?? '');
@@ -275,7 +299,7 @@ const NoteDetail = () => {
               </motion.div>
             )}
             <motion.div {...buttonHoverTap}>
-              <Button variant="destructive" onClick={onDelete}>
+              <Button variant="destructive" size="sm" onClick={onDelete}>
                 Delete
               </Button>
             </motion.div>
@@ -292,233 +316,184 @@ const NoteDetail = () => {
           </>
         }
       />
-      <motion.div className={`${container} pt-32 md:pt-36`} {...pageEnter}>
-      {editing ? (
-        <motion.div
-          className="mt-4"
-          initial={{ opacity: 0, scale: 0.985 }}
-          animate={{ opacity: 1, scale: 1 }}
-          transition={{ duration: 0.2 }}
-        >
-          <motion.div {...inputFocus}>
-            <Input
-              ref={editTitleRef}
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === 'ArrowDown') {
-                  e.preventDefault();
-                  moveEditFocus(1, e.currentTarget);
-                  return;
-                }
-                if (e.key === 'ArrowUp') {
-                  e.preventDefault();
-                  moveEditFocus(-1, e.currentTarget);
-                  return;
-                }
-                if ((e.ctrlKey || e.metaKey) && (e.code === 'Space' || e.key === ' ')) {
-                  e.preventDefault();
-                  void onSave();
-                }
-              }}
-            />
-          </motion.div>
-          <motion.div {...textareaFocus} className="mt-4">
-            <Textarea
-              ref={editContentRef}
-              value={content}
-              onChange={(e) => setContent(e.target.value)}
-              onKeyDown={(e) => {
-                // Ctrl/Cmd + X => insert Markdown code fences around cursor/selection
-                const isCtrlX = (e.ctrlKey || e.metaKey) && (e.code === 'KeyX' || e.key.toLowerCase() === 'x');
-                if (isCtrlX) {
-                  e.preventDefault();
-                  const el = e.currentTarget;
-                  const start = el.selectionStart ?? 0;
-                  const end = el.selectionEnd ?? start;
-                  const before = content.slice(0, start);
-                  const selected = content.slice(start, end);
-                  const after = content.slice(end);
-                  const open = '```javascript\n';
-                  const close = '\n```';
-                  let nextContent: string;
-                  const caretStart = start + open.length;
-                  let caretEnd: number;
-                  if (start !== end) {
-                    // wrap selection
-                    nextContent = `${before}${open}${selected}${close}${after}`;
-                    caretEnd = caretStart + selected.length;
-                  } else {
-                    // insert empty fenced block and place caret inside
-                    nextContent = `${before}${open}${close}${after}`;
-                    caretEnd = caretStart;
-                  }
-                  setContent(nextContent);
-                  // Restore caret inside fences on next paint
-                  requestAnimationFrame(() => {
-                    try {
-                      const node = editContentRef.current;
-                      if (node) node.setSelectionRange(caretStart, caretEnd);
-                    } catch {}
-                  });
-                  return;
-                }
-                if (e.key === 'ArrowDown') {
-                  e.preventDefault();
-                  moveEditFocus(1, e.currentTarget);
-                  return;
-                }
-                if (e.key === 'ArrowUp') {
-                  e.preventDefault();
-                  moveEditFocus(-1, e.currentTarget);
-                  return;
-                }
-                if ((e.ctrlKey || e.metaKey) && (e.code === 'Space' || e.key === ' ')) {
-                  e.preventDefault();
-                  void onSave();
-                }
-              }}
-              rows={14}
-            />
-          </motion.div>
-          <div className="mt-3 flex gap-2">
-            <motion.div {...buttonHoverTap}>
-              <Button
-                ref={saveRef}
-                onClick={onSave}
-                onKeyDown={(e) => {
-                  if (e.key === 'ArrowDown') {
-                    e.preventDefault();
-                    moveEditFocus(1, e.currentTarget);
-                  } else if (e.key === 'ArrowUp') {
-                    e.preventDefault();
-                    moveEditFocus(-1, e.currentTarget);
-                  }
-                }}
-              >
-                Save
-              </Button>
-            </motion.div>
-            <motion.div {...buttonHoverTap}>
-              <Button
-                ref={cancelRef}
-                variant="ghost"
-                onClick={() => setEditing(false)}
-                onKeyDown={(e) => {
-                  if (e.key === 'ArrowDown') {
-                    e.preventDefault();
-                    moveEditFocus(1, e.currentTarget);
-                  } else if (e.key === 'ArrowUp') {
-                    e.preventDefault();
-                    moveEditFocus(-1, e.currentTarget);
-                  }
-                }}
-              >
-                Cancel
-              </Button>
-            </motion.div>
-          </div>
-        </motion.div>
-      ) : (
-        <motion.div
-          className="mt-6"
-          initial={{ opacity: 0, scale: 0.985 }}
-          animate={{ opacity: 1, scale: 1 }}
-          transition={{ duration: 0.2 }}
-        >
-          <motion.h1 className={headline} {...headlineEnter}>{note.title}</motion.h1>
-          <div className="relative mt-2" ref={contentRef}>
-            {/* Content cross-fade on update; fades out while remixing */}
-            <motion.div
-              key={note.updatedAt}
-              initial={{ opacity: 0, y: 2 }}
-              animate={{ opacity: isRemixing ? 0 : 1, y: 0 }}
-              transition={{ duration: 0.3 }}
-            >
-              <Markdown content={note.content} />
-            </motion.div>
-            {/* Remix skeleton overlay */}
-            <AnimatePresence>
-              {isRemixing ? (
-                <motion.div
-                  key="remix-skeleton"
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  exit={{ opacity: 0 }}
-                  transition={{ duration: 1.2 }}
-                  className="absolute left-0 right-0 top-0 rounded-xl bg-white/5 ring-1 ring-white/10 overflow-hidden pointer-events-none"
-                  style={{ height: skeletonHeight || undefined }}
-                >
-                  <div className="w-full h-full pulse-strong bg-gradient-to-b from-white/20 via-white/10 to-white/20" />
-                  {/* Centered spinner */}
-                  <motion.div
-                    className="absolute inset-0 grid place-items-center"
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 0.9 }}
-                    exit={{ opacity: 0 }}
-                    transition={{ duration: 0.6 }}
-                  >
-                    <div className="h-16 w-16 md:h-20 md:w-20 rounded-full border-4 border-black/60 border-t-transparent animate-spin" />
-                  </motion.div>
-                </motion.div>
-              ) : null}
-            </AnimatePresence>
-          </div>
-          <motion.div
-            className="text-gray-400 mt-4 text-sm"
-            animate={{ opacity: isRemixing ? 0 : 1 }}
-            transition={{ duration: 0.3 }}
-          >
-            Updated: {new Date(note.updatedAt).toLocaleString()}
-          </motion.div>
-          <div className="mt-6 flex flex-wrap items-center gap-3">
-            <Dropdown open={remixOpen} onOpenChange={setRemixOpen}>
-              <DropdownTrigger className="text-sm">
-                {isRemixing ? 'Remixing…' : persona ? `Persona: ${persona}` : 'AI remix'}
-                <svg width="16" height="16" viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M6 8l4 4 4-4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
-              </DropdownTrigger>
-              <DropdownContent>
-                <DropdownItem
-                  onClick={() => {
-                    setRemixOpen(false);
-                    setPersona('');
+      <Page className="relative min-h-screen overflow-hidden">
+        <VoiceGlow voice={voice} busy={isRemixing} />
+        <div className={`${column} relative pt-28 md:pt-32 pb-24`}>
+          {editing ? (
+            <motion.div key="edit" {...enterItem}>
+              <motion.div {...inputFocus}>
+                <Input
+                  ref={editTitleRef}
+                  aria-label="Title"
+                  className="h-14 !text-2xl font-extralight"
+                  value={title}
+                  onChange={(e) => setTitle(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'ArrowDown') {
+                      e.preventDefault();
+                      moveEditFocus(1, e.currentTarget);
+                      return;
+                    }
+                    if (e.key === 'ArrowUp') {
+                      e.preventDefault();
+                      moveEditFocus(-1, e.currentTarget);
+                      return;
+                    }
+                    if ((e.ctrlKey || e.metaKey) && (e.code === 'Space' || e.key === ' ')) {
+                      e.preventDefault();
+                      void onSave();
+                    }
                   }}
-                >
-                  Clear
-                </DropdownItem>
-                {(personas ?? ['funny', 'corporate', 'silly', 'overfriendly', 'sarcastic', 'summary-scholar']).map((p) => (
-                  <DropdownItem
-                    key={p}
-                    onClick={async () => {
-                      setRemixOpen(false);
-                      setPersona(p);
-                      await remixMutation.mutateAsync(p);
+                />
+              </motion.div>
+              <motion.div {...textareaFocus} className="mt-4">
+                <Textarea
+                  ref={editContentRef}
+                  value={content}
+                  onChange={(e) => setContent(e.target.value)}
+                  onKeyDown={(e) => {
+                    // Ctrl/Cmd + X => insert Markdown code fences around cursor/selection
+                    const isCtrlX =
+                      (e.ctrlKey || e.metaKey) &&
+                      (e.code === 'KeyX' || e.key.toLowerCase() === 'x');
+                    if (isCtrlX) {
+                      e.preventDefault();
+                      const el = e.currentTarget;
+                      const start = el.selectionStart ?? 0;
+                      const end = el.selectionEnd ?? start;
+                      const before = content.slice(0, start);
+                      const selected = content.slice(start, end);
+                      const after = content.slice(end);
+                      const open = '```javascript\n';
+                      const close = '\n```';
+                      let nextContent: string;
+                      const caretStart = start + open.length;
+                      let caretEnd: number;
+                      if (start !== end) {
+                        // wrap selection
+                        nextContent = `${before}${open}${selected}${close}${after}`;
+                        caretEnd = caretStart + selected.length;
+                      } else {
+                        // insert empty fenced block and place caret inside
+                        nextContent = `${before}${open}${close}${after}`;
+                        caretEnd = caretStart;
+                      }
+                      setContent(nextContent);
+                      // Restore caret inside fences on next paint
+                      requestAnimationFrame(() => {
+                        try {
+                          const node = editContentRef.current;
+                          if (node) node.setSelectionRange(caretStart, caretEnd);
+                        } catch {}
+                      });
+                      return;
+                    }
+                    if (e.key === 'ArrowDown') {
+                      e.preventDefault();
+                      moveEditFocus(1, e.currentTarget);
+                      return;
+                    }
+                    if (e.key === 'ArrowUp') {
+                      e.preventDefault();
+                      moveEditFocus(-1, e.currentTarget);
+                      return;
+                    }
+                    if ((e.ctrlKey || e.metaKey) && (e.code === 'Space' || e.key === ' ')) {
+                      e.preventDefault();
+                      void onSave();
+                    }
+                  }}
+                  rows={14}
+                />
+              </motion.div>
+              <div className="mt-3 flex gap-2">
+                <motion.div {...buttonHoverTap}>
+                  <Button
+                    ref={saveRef}
+                    onClick={onSave}
+                    onKeyDown={(e) => {
+                      if (e.key === 'ArrowDown') {
+                        e.preventDefault();
+                        moveEditFocus(1, e.currentTarget);
+                      } else if (e.key === 'ArrowUp') {
+                        e.preventDefault();
+                        moveEditFocus(-1, e.currentTarget);
+                      }
                     }}
                   >
-                    {p === 'summary-scholar' ? 'Summary scholar' : p.charAt(0).toUpperCase() + p.slice(1)}
-                  </DropdownItem>
-                ))}
-              </DropdownContent>
-            </Dropdown>
-            {personasLoading && (
-              <div className="flex items-center gap-2 text-gray-400 text-sm">
-                <Spinner size="sm" center={false} />
-                <span>Loading personas…</span>
+                    Save
+                  </Button>
+                </motion.div>
+                <motion.div {...buttonHoverTap}>
+                  <Button
+                    ref={cancelRef}
+                    variant="ghost"
+                    onClick={() => setEditing(false)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'ArrowDown') {
+                        e.preventDefault();
+                        moveEditFocus(1, e.currentTarget);
+                      } else if (e.key === 'ArrowUp') {
+                        e.preventDefault();
+                        moveEditFocus(-1, e.currentTarget);
+                      }
+                    }}
+                  >
+                    Cancel
+                  </Button>
+                </motion.div>
               </div>
-            )}
-            {originalContent != null && (
-              <button onClick={onUndo} className="text-gray-300/80 hover:text-white transition px-2 py-1 text-sm">Undo</button>
-            )}
-            {isRemixing && (
-              <div className="flex items-center gap-2 text-gray-400 text-sm">
-                <Spinner size="sm" center={false} />
-                <span>Transforming…</span>
-              </div>
-            )}
-          </div>
-        </motion.div>
-      )}
-      </motion.div>
+            </motion.div>
+          ) : (
+            <React.Fragment key="view">
+              <motion.h1 className={pageHeadline} variants={remixLine}>
+                <BlurWords text={note.title} />
+              </motion.h1>
+              <motion.p className="mt-3 text-sm text-gray-400" aria-live="polite" {...enterItem}>
+                {isRemixing
+                  ? `Remixing as ${voice.label}…`
+                  : `Updated ${new Date(note.updatedAt).toLocaleString()}`}
+              </motion.p>
+              <motion.div className="mt-6" {...enterItem}>
+                <VoiceChips
+                  voices={voices}
+                  activeId={voice.id}
+                  onPick={pickVoice}
+                  disabled={isRemixing}
+                  indicator={isRemixing && <span className={cn(sweep, 'via-white/25')} />}
+                />
+              </motion.div>
+              <motion.div className="relative" {...enterItem}>
+                {/* Each saved version blurs in; while a remix cooks, the current one dims under a sweep */}
+                <AnimatePresence mode="wait" initial={false}>
+                  <motion.div
+                    key={note.updatedAt}
+                    variants={contentSwap}
+                    initial="hidden"
+                    animate={isRemixing ? 'busy' : 'show'}
+                    exit="leave"
+                  >
+                    <Markdown content={note.content} />
+                  </motion.div>
+                </AnimatePresence>
+                <AnimatePresence>
+                  {isRemixing && (
+                    <motion.div
+                      aria-hidden
+                      className="pointer-events-none absolute inset-0 overflow-hidden rounded-2xl"
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      exit={{ opacity: 0 }}
+                    >
+                      <div className={cn(sweep, 'via-white/[0.07]')} />
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </motion.div>
+            </React.Fragment>
+          )}
+        </div>
+      </Page>
     </>
   );
 };

@@ -58,12 +58,3 @@ input:-webkit-autofill:focus {
   from { opacity: 0; }
   to { opacity: 1; }
 }
-
-/* Stronger pulse for remix skeleton */
-@keyframes pulse-strong {
-  0%, 100% { opacity: 0.35; }
-  50% { opacity: 1; }
-}
-.pulse-strong {
-  animation: pulse-strong 1.8s ease-in-out infinite;
-}
