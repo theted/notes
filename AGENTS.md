@@ -20,7 +20,7 @@ This document explains the repo structure, coding style, conventions, and daily 
   - `.eslintrc.cjs`, `tsconfig.json`, `.env.example`, `Dockerfile`.
 - `frontend/`
   - `src/main.tsx`: Router + Auth provider bootstrap.
-  - `src/pages/`: `Home.tsx`, `NoteDetail.tsx`, `Login.tsx`.
+  - `src/pages/`: `Home.tsx`, `NoteDetail.tsx`, `Splash.tsx` (sign-in landing page at `/login`).
   - `src/components/`: `SearchBar.tsx`, `NotesList.tsx`, `Note.tsx`.
   - `src/auth/`: `AuthContext.tsx`, `RequireAuth.tsx`.
   - `src/config/`: `animations.ts`, `styles.ts` (central motion presets + Tailwind tokens).

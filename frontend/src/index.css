@@ -38,6 +38,15 @@ body::before {
   animation: bg-fade-in 600ms ease-out 80ms forwards;
 }
 
+/* Keep browser-autofilled fields dark: the transition holds off Chrome's autofill background */
+input:-webkit-autofill,
+input:-webkit-autofill:hover,
+input:-webkit-autofill:focus {
+  -webkit-text-fill-color: #f3f4f6;
+  caret-color: #f3f4f6;
+  transition: background-color 600000s 0s, color 600000s 0s;
+}
+
 /* Ensure app layers above the gradient */
 #root {
   position: relative;

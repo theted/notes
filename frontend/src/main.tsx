@@ -4,7 +4,7 @@ import { BrowserRouter, Routes, Route, useLocation } from 'react-router-dom';
 import { AnimatePresence } from 'framer-motion';
 import Home from './pages/Home';
 import NoteDetail from './pages/NoteDetail';
-import Login from './pages/Login';
+import Splash from './pages/Splash';
 import { AuthProvider } from './auth/AuthContext';
 import RequireAuth from './auth/RequireAuth';
 import { QueryClientProvider } from '@tanstack/react-query';
@@ -20,22 +20,22 @@ const Routed = () => {
   return (
     <AnimatePresence mode="wait" initial={false}>
       <Routes location={location} key={location.pathname}>
-        <Route path="/login" element={<Login />} />
+        <Route path="/login" element={<Splash />} />
         <Route
           path="/"
-          element={(
+          element={
             <RequireAuth>
               <Home />
             </RequireAuth>
-          )}
+          }
         />
         <Route
           path="/notes/:id"
-          element={(
+          element={
             <RequireAuth>
               <NoteDetail />
             </RequireAuth>
-          )}
+          }
         />
       </Routes>
     </AnimatePresence>
