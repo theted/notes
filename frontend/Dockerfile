@@ -5,6 +5,9 @@ RUN npm install
 COPY tsconfig.json ./
 COPY tsconfig.node.json ./
 COPY vite.config.ts ./
+# Without these Vite skips PostCSS, and the bundle ships no Tailwind CSS at all
+COPY postcss.config.cjs ./
+COPY tailwind.config.cjs ./
 COPY index.html ./
 COPY src ./src
 RUN npm run build
