@@ -1,4 +1,4 @@
-import { probeOpenAI } from '../ai';
+import { probeOpenAI } from '../ai.js';
 
 async function main() {
   if (!process.env.OPENAI_API_KEY) {

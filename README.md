@@ -46,7 +46,8 @@ A simple note-taking app.
 ### Docker
 
 - docker compose up --build
-- Frontend served on http://localhost:8080; backend on http://localhost:4000.
+- App served on http://localhost:8086; the frontend's nginx proxies `/api` to the backend, which isn't published.
+- Production: notes.sundbergsolutions.se, deployed by `.github/workflows/deploy.yml` on every push to master.
 - SQLite database stored in a named volume `notes_data` mounted at `/data/notes.db` in the backend container.
 
 ### Keyboard Navigation & Shortcuts

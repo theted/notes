@@ -1,5 +1,5 @@
-import type { Note, NoteInput } from './types';
-import { NoteModel } from './orm';
+import type { Note, NoteInput } from './types.js';
+import { NoteModel } from './orm.js';
 
 const rowToNote = (row: NoteModel): Note => ({
   id: row.id,
@@ -15,16 +15,27 @@ export const getNote = async (id: number, userId: number): Promise<Note | null> 
 };
 
 export const listNotes = async (userId: number): Promise<Note[]> => {
-  const rows = await NoteModel.findAll({ where: { user_id: userId }, order: [['updated_at', 'DESC']] });
+  const rows = await NoteModel.findAll({
+    where: { user_id: userId },
+    order: [['updated_at', 'DESC']],
+  });
   return rows.map(rowToNote);
 };
 
 export const createNote = async (input: NoteInput, userId: number): Promise<Note> => {
-  const row = await NoteModel.create({ title: input.title, content: input.content, user_id: userId });
+  const row = await NoteModel.create({
+    title: input.title,
+    content: input.content,
+    user_id: userId,
+  });
   return rowToNote(row);
 };
 
-export const updateNote = async (id: number, input: NoteInput, userId: number): Promise<Note | null> => {
+export const updateNote = async (
+  id: number,
+  input: NoteInput,
+  userId: number,
+): Promise<Note | null> => {
   const row = await NoteModel.findOne({ where: { id, user_id: userId } });
   if (!row) return null;
   row.title = input.title;
@@ -91,7 +102,7 @@ export const searchNotes = async (query: string, userId: number): Promise<Note[]
 
   // Primary pass: subsequence match on title and content
   const primary: Scored[] = rows
-    .map((r: NoteRow) => {
+    .map((r: NoteModel) => {
       const titleScore = fuzzyScore(query, r.title);
       const contentScore = fuzzyScore(query, r.content) * 0.5; // weight content lower
       return { row: r, score: titleScore + contentScore };
@@ -107,8 +118,8 @@ export const searchNotes = async (query: string, userId: number): Promise<Note[]
   // Fallback pass: looser token-based substring scoring to surface near matches
   const inPrimary = new Set(primary.map((s) => s.row.id));
   const fallback: Scored[] = rows
-    .filter((r: NoteRow) => !inPrimary.has(r.id))
-    .map((r: NoteRow) => ({ row: r, score: looseScore(query, r.title, r.content) }))
+    .filter((r: NoteModel) => !inPrimary.has(r.id))
+    .map((r: NoteModel) => ({ row: r, score: looseScore(query, r.title, r.content) }))
     .filter((s: Scored) => s.score > 0)
     .sort((a: Scored, b: Scored) => b.score - a.score)
     .slice(0, 10);

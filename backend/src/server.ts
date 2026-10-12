@@ -3,10 +3,10 @@ import express from 'express';
 import morgan from 'morgan';
 import cors from 'cors';
 import { z } from 'zod';
-import { requirePassword } from './auth';
-import { createNote, deleteNote, getNote, listNotes, searchNotes, updateNote } from './notes';
-import { remixContent, listPersonas, probeOpenAI } from './ai';
-import { initDb } from './orm';
+import { requirePassword } from './auth.js';
+import { createNote, deleteNote, getNote, listNotes, searchNotes, updateNote } from './notes.js';
+import { remixContent, listPersonas, probeOpenAI } from './ai.js';
+import { initDb } from './orm.js';
 
 const app = express();
 app.use(cors());
@@ -85,7 +85,7 @@ app.get('/api/notes', requirePassword, async (req, res) => {
       if (b.type === 'text') {
         if (pushText(b.content)) break;
       } else if (b.type === 'code') {
-        const codeLines = b.content.replace(/\s+$/,'').split(/\n/);
+        const codeLines = b.content.replace(/\s+$/, '').split(/\n/);
         const shortEnough = codeLines.length <= MAX_CODE_LINES;
         const earlyEnough = paraCount <= ALLOW_CODE_WITHIN_PARAS;
         if (!seenCode && shortEnough && earlyEnough) {

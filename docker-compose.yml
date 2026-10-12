@@ -10,15 +10,16 @@ services:
       - OPENAI_MODEL=${OPENAI_MODEL}
     volumes:
       - notes_data:/data
-    ports:
-      - '4000:4000'
+    restart: unless-stopped
   frontend:
     build: ./frontend
-    environment:
-      - VITE_API_BASE=http://localhost:4000/api
+    # Serves the app and proxies /api to the backend. Localhost only: on the box the host nginx
+    # terminates TLS in front of this. 8086 is claimed in the port registry in
+    # theted/infrastructure (the-box.md).
     ports:
-      - '8080:80'
+      - '127.0.0.1:8086:80'
     depends_on:
       - backend
+    restart: unless-stopped
 volumes:
   notes_data:

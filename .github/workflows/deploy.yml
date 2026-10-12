@@ -1,0 +1,21 @@
+# Deploy to the shared EC2 box on every push to master.
+#
+# The heavy lifting is in theted/workflows: it SSHes in, checks out the
+# triggering commit under /opt/notes and rebuilds the compose stack in place.
+# Secrets (EC2_HOST, EC2_USER, EC2_SSH_KEY) are inherited from the repo's
+# Actions secrets. The conventions it follows - port registry, deploy roots,
+# nginx - are documented in the private theted/infrastructure repo.
+
+name: Deploy
+
+on:
+  push:
+    branches: [master]
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    uses: theted/workflows/.github/workflows/deploy-ec2.yml@master
+    with:
+      app-dir: /opt/notes
+    secrets: inherit
