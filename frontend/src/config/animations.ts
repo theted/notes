@@ -1,28 +1,7 @@
 import type { MotionProps, Transition, Variants } from 'framer-motion';
 
-export const pageEnter: MotionProps = {
-  initial: { opacity: 0, y: 6 },
-  animate: { opacity: 1, y: 0 },
-  exit: { opacity: 0, y: 6 },
-  transition: { duration: 0.25 },
-};
-
-// Content pages with slower fade-out for nicer logout transition
-export const pageEnterSlowExit: MotionProps = {
-  initial: { opacity: 0, y: 6 },
-  animate: { opacity: 1, y: 0 },
-  exit: { opacity: 0, y: 8, transition: { duration: 0.5 } },
-  transition: { duration: 0.25 },
-};
-
-export const headlineEnter: MotionProps = {
-  initial: { opacity: 0, scale: 0.98 },
-  animate: { opacity: 1, scale: 1 },
-  transition: { duration: 0.25 },
-};
-
-// Splash: one orchestrated load sequence; children enter in turn
-export const splashSequence: MotionProps = {
+// Every page: one orchestrated load sequence; children with `enterItem` rise in turn
+export const enterSequence: MotionProps = {
   initial: 'hidden',
   animate: 'show',
   variants: {
@@ -31,13 +10,13 @@ export const splashSequence: MotionProps = {
   },
 };
 
-// Splash: everything leaves together, blurred, when the notebook opens
-export const splashLeave: MotionProps = {
+// Every page: everything leaves together, blurred, as the next page arrives
+export const leaveBlur: MotionProps = {
   exit: { opacity: 0, y: -8, filter: 'blur(6px)', transition: { duration: 0.35, ease: 'easeIn' } },
 };
 
-// Splash: swooshy fade-in-up with a subtle spring
-export const splashItem: MotionProps = {
+// Swooshy fade-in-up with a subtle spring
+export const enterItem: MotionProps = {
   variants: {
     hidden: { opacity: 0, y: 18, scale: 0.98 },
     show: {
@@ -49,8 +28,8 @@ export const splashItem: MotionProps = {
   },
 };
 
-// Remixing headline: words blur out upward, the next voice's words blur in from below.
-// `custom` delays the first line, so it lands after the wordmark on page load.
+// Headlines (splash remix, greeting, note titles): words blur in from below, and on a remix blur
+// out upward. `custom` delays the first word, e.g. so the splash headline lands after the wordmark.
 export const remixLine: Variants = {
   hidden: {},
   show: (delay: number = 0) => ({ transition: { staggerChildren: 0.035, delayChildren: delay } }),
@@ -84,17 +63,60 @@ export const glowFade: MotionProps = {
   transition: { duration: 1.2, ease: 'easeInOut' },
 };
 
-export const cardItem: MotionProps = {
-  layout: true,
-  initial: { opacity: 0, scale: 0.985 },
-  animate: { opacity: 1, scale: 1 },
-  exit: { opacity: 0, scale: 0.98 },
-  transition: { duration: 0.18, ease: 'easeOut' },
+// Drifting colour behind the signed-in pages: eases in as the splash blurs away
+export const auroraFade: MotionProps = {
+  initial: { opacity: 0 },
+  animate: { opacity: 1, transition: { duration: 1.6, ease: 'easeOut' } },
+  exit: { opacity: 0, transition: { duration: 0.5, ease: 'easeIn' } },
 };
 
-export const hoverScaleSmall: MotionProps = {
-  whileHover: { scale: 1.01 },
-  transition: { duration: 0.15 },
+// TopBar contents fade in with each page; the bar itself stays put
+export const topBarFade: MotionProps = {
+  initial: { opacity: 0 },
+  animate: { opacity: 1 },
+  transition: { duration: 0.3, ease: 'easeOut' },
+};
+
+// Note cards continue the page sequence, a beat apart; search results pop in and out
+export const listStagger: Variants = {
+  hidden: {},
+  show: { transition: { staggerChildren: 0.06 } },
+};
+
+export const listItemEnter: MotionProps = {
+  ...enterItem,
+  exit: { opacity: 0, scale: 0.98, transition: { duration: 0.15, ease: 'easeIn' } },
+  layout: 'position',
+};
+
+export const cardLift: MotionProps = {
+  whileHover: { y: -3 },
+  whileTap: { scale: 0.99 },
+  transition: { type: 'spring', stiffness: 400, damping: 28 },
+};
+
+// Note content: dims and blurs while a remix cooks, then the new version blurs in
+export const contentSwap: Variants = {
+  hidden: { opacity: 0, y: 10, filter: 'blur(8px)' },
+  show: {
+    opacity: 1,
+    y: 0,
+    filter: 'blur(0px)',
+    transition: { duration: 0.5, ease: [0.22, 1, 0.36, 1] },
+  },
+  busy: { opacity: 0.35, filter: 'blur(3px)', transition: { duration: 0.6, ease: 'easeOut' } },
+  leave: { opacity: 0, filter: 'blur(8px)', transition: { duration: 0.25, ease: 'easeIn' } },
+};
+
+export const dialogEnter: MotionProps = {
+  initial: { opacity: 0, y: 18, scale: 0.97 },
+  animate: {
+    opacity: 1,
+    y: 0,
+    scale: 1,
+    transition: { type: 'spring', stiffness: 320, damping: 26 },
+  },
+  exit: { opacity: 0, y: 8, scale: 0.985, transition: { duration: 0.15, ease: 'easeIn' } },
 };
 
 export const inputFocus: MotionProps = {
@@ -111,28 +133,4 @@ export const buttonHoverTap: MotionProps = {
   whileHover: { scale: 1.03 },
   whileTap: { scale: 0.98 },
   transition: { duration: 0.12 },
-};
-
-// Staggered list container for notes
-export const listStagger: MotionProps = {
-  initial: 'hidden',
-  animate: 'show',
-  exit: 'hidden',
-  variants: {
-    hidden: {},
-    show: {
-      transition: { staggerChildren: 0.14, delayChildren: 0.08 },
-    },
-  },
-};
-
-// Individual item zoom/opacity for staggered entrance
-export const listItemEnter: MotionProps = {
-  variants: {
-    hidden: { opacity: 0, scale: 0.985, y: 8 },
-    show: { opacity: 1, scale: 1, y: 0 },
-  },
-  exit: { opacity: 0, scale: 0.98, y: 6 },
-  transition: { duration: 0.2, ease: 'easeOut' },
-  layout: true,
 };

@@ -5,8 +5,8 @@ A simple note-taking app.
 ### Features
 
 - Lightning‑fast search: case‑insensitive fuzzy search across title and content, with a looser fallback that surfaces near‑matches when results are scarce.
-- AI‑powered remix: transform your notes with selectable personas (e.g., summary scholar, funny, corporate). A polished skeleton/spinner transition keeps the UI lively while generating.
-- Smooth, subtle motion: cross‑page fades, a swooshy login, staggered list animations, and refined hover states for a calm, modern feel.
+- AI‑powered remix: rewrite a note in another voice (e.g., summary scholar, funny, corporate) from the "Remix as" chips. The page tints to the voice while it works, the note blurs into its new version, and “Original” puts it back.
+- Vibrant, smooth motion: a slowly drifting aurora behind your notes, pages that rise in and blur out, headlines that blur in word by word, and cards that lift toward the cursor. Respects reduced motion.
 - Keyboard‑first workflow: create, edit, navigate, and search without leaving the keyboard (see shortcuts guide below).
 - Per‑password notebooks: “your password is your login” — every password unlocks its own set of notes.
 

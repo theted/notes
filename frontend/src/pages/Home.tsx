@@ -1,7 +1,15 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { motion } from 'framer-motion';
-import { pageEnterSlowExit as pageEnter, buttonHoverTap, inputFocus, textareaFocus } from '../config/animations';
-import { container } from '../config/styles';
+import {
+  enterItem,
+  remixLine,
+  buttonHoverTap,
+  inputFocus,
+  textareaFocus,
+} from '../config/animations';
+import { column, kbd, pageHeadline } from '../config/styles';
+import Page from '../components/Page';
+import BlurWords from '../components/BlurWords';
 import SearchBar from '../components/SearchBar';
 import NotesList from '../components/NotesList';
 import useDebounce from '../hooks/useDebounce';
@@ -16,7 +24,18 @@ import Button from '../components/ui/button';
 import Modal from '../components/ui/modal';
 import Spinner from '../components/ui/spinner';
 
+const greeting = () => {
+  const hour = new Date().getHours();
+  if (hour < 5) return 'Up late.';
+  if (hour < 12) return 'Good morning.';
+  if (hour < 18) return 'Good afternoon.';
+  return 'Good evening.';
+};
+
+const MOD = /Mac|iPhone|iPad/.test(navigator.userAgent) ? '⌘' : 'Ctrl';
+
 const Home = () => {
+  const [hello] = useState(greeting);
   const [query, setQuery] = useState<string>(() => sessionStorage.getItem('notesQuery') ?? '');
   const debounced = useDebounce(query, 200);
   const [error] = useState<string | null>(null);
@@ -105,8 +124,10 @@ const Home = () => {
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       const isCtrlSpace = (e.ctrlKey || e.metaKey) && (e.code === 'Space' || e.key === ' ');
-      const isCtrlI = (e.ctrlKey || e.metaKey) && (e.code === 'KeyI' || e.key.toLowerCase() === 'i');
-      const isCtrlX = (e.ctrlKey || e.metaKey) && (e.code === 'KeyX' || e.key.toLowerCase() === 'x');
+      const isCtrlI =
+        (e.ctrlKey || e.metaKey) && (e.code === 'KeyI' || e.key.toLowerCase() === 'i');
+      const isCtrlX =
+        (e.ctrlKey || e.metaKey) && (e.code === 'KeyX' || e.key.toLowerCase() === 'x');
       if (isCtrlSpace) {
         e.preventDefault();
         setIsNewOpen(true);
@@ -155,7 +176,9 @@ const Home = () => {
       });
     } else if (key.startsWith('note:')) {
       const id = key.slice('note:'.length);
-      const link = document.querySelector<HTMLAnchorElement>(`a[data-note-link][data-id="${CSS.escape(id)}"]`);
+      const link = document.querySelector<HTMLAnchorElement>(
+        `a[data-note-link][data-id="${CSS.escape(id)}"]`,
+      );
       if (link) requestAnimationFrame(() => link.focus());
       else
         requestAnimationFrame(() => {
@@ -260,6 +283,9 @@ const Home = () => {
     next?.focus();
   };
 
+  const noteCount = allNotes?.length ?? 0;
+  const isEmpty = allNotes !== undefined && noteCount === 0;
+
   return (
     <>
       <TopBar
@@ -275,49 +301,81 @@ const Home = () => {
           </div>
         }
       />
-      <motion.div
-        className={`${container} pt-32 md:pt-36 min-h-[calc(100vh-4rem)] ${!query && !isLoading && (data?.length ?? 0) === 0 ? 'flex flex-col justify-center' : ''}`}
-        {...pageEnter}
-      >
-        {(allNotes?.length ?? 0) > 0 ? (
-          <SearchBar
-            id="notes-search"
-            value={query}
-            onChange={setQuery}
-            inputRef={searchRef}
-            onFocus={() => sessionStorage.setItem('notesFocus', 'search')}
-            onKeyDown={(e) => {
-              if (e.key === 'ArrowDown') {
-                e.preventDefault();
-                const first = document.querySelector<HTMLAnchorElement>('a[data-note-link]');
-                if (first) {
-                  const id = first.getAttribute('data-id') ?? '';
-                  sessionStorage.setItem('notesFocus', `note:${id}`);
-                  requestAnimationFrame(() => first.focus());
+      <Page className={`${column} pt-28 md:pt-32 pb-24`}>
+        <motion.h1 className={pageHeadline} variants={remixLine}>
+          <BlurWords text={hello} />
+        </motion.h1>
+        <motion.p className="mt-3 min-h-[1.75rem] text-lg font-light text-gray-300" {...enterItem}>
+          {isEmpty ? (
+            'Nothing here yet. Your first note is a keystroke away.'
+          ) : allNotes ? (
+            <>
+              {noteCount === 1 ? '1 note' : `${noteCount} notes`}
+              <span className="hidden md:inline text-gray-400">
+                {' · '}
+                <kbd className={kbd}>{MOD} I</kbd> to search{' · '}
+                <kbd className={kbd}>{MOD} Space</kbd> for a new one
+              </span>
+            </>
+          ) : null}
+        </motion.p>
+
+        {noteCount > 0 ? (
+          <motion.div className="mt-8" {...enterItem}>
+            <SearchBar
+              id="notes-search"
+              value={query}
+              onChange={setQuery}
+              inputRef={searchRef}
+              busy={isFetching}
+              onFocus={() => sessionStorage.setItem('notesFocus', 'search')}
+              onKeyDown={(e) => {
+                if (e.key === 'ArrowDown') {
+                  e.preventDefault();
+                  const first = document.querySelector<HTMLAnchorElement>('a[data-note-link]');
+                  if (first) {
+                    const id = first.getAttribute('data-id') ?? '';
+                    sessionStorage.setItem('notesFocus', `note:${id}`);
+                    requestAnimationFrame(() => first.focus());
+                  }
+                  return;
                 }
-                return;
-              }
-              const goToFirst = () => {
-                const firstId = (data && data.length > 0 ? data[0].id : allNotes && allNotes.length > 0 ? allNotes[0].id : null);
-                if (firstId != null) {
-                  sessionStorage.setItem('notesFocus', `note:${firstId}`);
-                  navigate(`/notes/${firstId}`);
+                const goToFirst = () => {
+                  const firstId =
+                    data && data.length > 0
+                      ? data[0].id
+                      : allNotes && allNotes.length > 0
+                        ? allNotes[0].id
+                        : null;
+                  if (firstId != null) {
+                    sessionStorage.setItem('notesFocus', `note:${firstId}`);
+                    navigate(`/notes/${firstId}`);
+                  }
+                };
+                if (e.key === 'ArrowRight' || e.code === 'ArrowRight') {
+                  e.preventDefault();
+                  goToFirst();
+                  return;
                 }
-              };
-              if (e.key === 'ArrowRight' || e.code === 'ArrowRight') {
-                e.preventDefault();
-                goToFirst();
-                return;
-              }
-              if (e.key === 'Enter') {
-                e.preventDefault();
-                goToFirst();
-              }
-            }}
-          />
+                if (e.key === 'Enter') {
+                  e.preventDefault();
+                  goToFirst();
+                }
+              }}
+            />
+          </motion.div>
         ) : null}
+        {isEmpty && (
+          <motion.div className="mt-8" {...enterItem}>
+            <motion.div className="inline-block" {...buttonHoverTap}>
+              <Button size="lg" onClick={() => setIsNewOpen(true)}>
+                Write your first note
+              </Button>
+            </motion.div>
+          </motion.div>
+        )}
         {isLoading && !(data && data.length > 0) && (
-          <div className="mt-2 text-gray-400">
+          <div className="mt-6 text-gray-400">
             <div className="inline-flex items-center gap-2">
               <Spinner size="sm" center={false} />
               <span>Loading…</span>
@@ -325,75 +383,90 @@ const Home = () => {
           </div>
         )}
         {error && <div className="mt-3 text-red-400">{error}</div>}
-        <div className="mt-6">
-          {data && data.length > 0 ? (
+        {data && (data.length > 0 || query) ? (
+          <div className="mt-6">
             <NotesList notes={data} />
-          ) : (
-            !query && (
-              <div className="text-center text-gray-400 py-16">No notes yet. Create your first note below.</div>
-            )
-          )}
-        </div>
+          </div>
+        ) : null}
+      </Page>
 
-        {/* New Note Modal */}
-        <Modal open={isNewOpen} onOpenChange={setIsNewOpen} title="New Note">
-          <div>
-            <motion.div {...inputFocus}>
-              <Input
-                ref={titleRef}
-                value={title}
-                onChange={(e) => setTitle(e.target.value)}
-                onKeyDown={(e) => {
-                  const isCtrlSpace = (e.ctrlKey || e.metaKey) && (e.code === 'Space' || e.key === ' ');
-                  const isEnter = e.key === 'Enter' && !e.shiftKey;
-                  if (e.key === 'ArrowDown') {
-                    e.preventDefault();
-                    moveFocus(1, e.currentTarget);
-                    return;
-                  }
-                  if (e.key === 'ArrowUp') {
-                    e.preventDefault();
-                    moveFocus(-1, e.currentTarget);
-                    return;
-                  }
-                  if ((isCtrlSpace || isEnter) && canCreate) {
-                    e.preventDefault();
-                    void onCreate();
-                  }
-                }}
-                placeholder="Title"
-              />
-            </motion.div>
-            <motion.div {...textareaFocus} className="mt-4">
-              <Textarea
-                ref={contentRef}
-                value={content}
-                onChange={(e) => setContent(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === 'ArrowDown') {
-                    e.preventDefault();
-                    moveFocus(1, e.currentTarget);
-                    return;
-                  }
-                  if (e.key === 'ArrowUp') {
-                    e.preventDefault();
-                    moveFocus(-1, e.currentTarget);
-                    return;
-                  }
-                  if ((e.ctrlKey || e.metaKey) && (e.code === 'Space' || e.key === ' ')) {
-                    e.preventDefault();
-                    if (canCreate) onCreate();
-                  }
-                }}
-                placeholder="Content"
-                rows={8}
-              />
-            </motion.div>
-            <div className="mt-4 flex items-center gap-3 justify-end">
+      {/* New Note Modal: outside the Page, whose exit blur would re-anchor a fixed layer */}
+      <Modal open={isNewOpen} onOpenChange={setIsNewOpen} title="New Note">
+        <div>
+          <motion.div {...inputFocus}>
+            <Input
+              ref={titleRef}
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              onKeyDown={(e) => {
+                const isCtrlSpace =
+                  (e.ctrlKey || e.metaKey) && (e.code === 'Space' || e.key === ' ');
+                const isEnter = e.key === 'Enter' && !e.shiftKey;
+                if (e.key === 'ArrowDown') {
+                  e.preventDefault();
+                  moveFocus(1, e.currentTarget);
+                  return;
+                }
+                if (e.key === 'ArrowUp') {
+                  e.preventDefault();
+                  moveFocus(-1, e.currentTarget);
+                  return;
+                }
+                if ((isCtrlSpace || isEnter) && canCreate) {
+                  e.preventDefault();
+                  void onCreate();
+                }
+              }}
+              placeholder="Title"
+            />
+          </motion.div>
+          <motion.div {...textareaFocus} className="mt-4">
+            <Textarea
+              ref={contentRef}
+              value={content}
+              onChange={(e) => setContent(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'ArrowDown') {
+                  e.preventDefault();
+                  moveFocus(1, e.currentTarget);
+                  return;
+                }
+                if (e.key === 'ArrowUp') {
+                  e.preventDefault();
+                  moveFocus(-1, e.currentTarget);
+                  return;
+                }
+                if ((e.ctrlKey || e.metaKey) && (e.code === 'Space' || e.key === ' ')) {
+                  e.preventDefault();
+                  if (canCreate) onCreate();
+                }
+              }}
+              placeholder="Content"
+              rows={8}
+            />
+          </motion.div>
+          <div className="mt-4 flex items-center gap-3 justify-end">
+            <Button
+              ref={cancelRef}
+              variant="ghost"
+              onClick={() => setIsNewOpen(false)}
+              onKeyDown={(e) => {
+                if (e.key === 'ArrowDown') {
+                  e.preventDefault();
+                  moveFocus(1, e.currentTarget);
+                } else if (e.key === 'ArrowUp') {
+                  e.preventDefault();
+                  moveFocus(-1, e.currentTarget);
+                }
+              }}
+            >
+              Cancel
+            </Button>
+            <motion.div {...(canCreate ? buttonHoverTap : {})}>
               <Button
-                ref={cancelRef}
-                variant="ghost"
-                onClick={() => setIsNewOpen(false)}
+                ref={createRef}
+                disabled={!canCreate}
+                onClick={onCreate}
                 onKeyDown={(e) => {
                   if (e.key === 'ArrowDown') {
                     e.preventDefault();
@@ -404,30 +477,12 @@ const Home = () => {
                   }
                 }}
               >
-                Cancel
+                Create
               </Button>
-              <motion.div {...(canCreate ? buttonHoverTap : {})}>
-                <Button
-                  ref={createRef}
-                  disabled={!canCreate}
-                  onClick={onCreate}
-                  onKeyDown={(e) => {
-                    if (e.key === 'ArrowDown') {
-                      e.preventDefault();
-                      moveFocus(1, e.currentTarget);
-                    } else if (e.key === 'ArrowUp') {
-                      e.preventDefault();
-                      moveFocus(-1, e.currentTarget);
-                    }
-                  }}
-                >
-                  Create
-                </Button>
-              </motion.div>
-            </div>
+            </motion.div>
           </div>
-        </Modal>
-      </motion.div>
+        </div>
+      </Modal>
     </>
   );
 };

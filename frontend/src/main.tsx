@@ -1,10 +1,11 @@
 import React from 'react';
 import ReactDOM from 'react-dom/client';
 import { BrowserRouter, Routes, Route, useLocation } from 'react-router-dom';
-import { AnimatePresence } from 'framer-motion';
+import { AnimatePresence, MotionConfig } from 'framer-motion';
 import Home from './pages/Home';
 import NoteDetail from './pages/NoteDetail';
 import Splash from './pages/Splash';
+import Aurora from './components/Aurora';
 import { AuthProvider } from './auth/AuthContext';
 import RequireAuth from './auth/RequireAuth';
 import { QueryClientProvider } from '@tanstack/react-query';
@@ -18,27 +19,30 @@ import { ToastProvider } from './components/ui/toast';
 const Routed = () => {
   const location = useLocation();
   return (
-    <AnimatePresence mode="wait" initial={false}>
-      <Routes location={location} key={location.pathname}>
-        <Route path="/login" element={<Splash />} />
-        <Route
-          path="/"
-          element={
-            <RequireAuth>
-              <Home />
-            </RequireAuth>
-          }
-        />
-        <Route
-          path="/notes/:id"
-          element={
-            <RequireAuth>
-              <NoteDetail />
-            </RequireAuth>
-          }
-        />
-      </Routes>
-    </AnimatePresence>
+    <MotionConfig reducedMotion="user">
+      <AnimatePresence>{location.pathname !== '/login' && <Aurora key="aurora" />}</AnimatePresence>
+      <AnimatePresence mode="wait" initial={false}>
+        <Routes location={location} key={location.pathname}>
+          <Route path="/login" element={<Splash />} />
+          <Route
+            path="/"
+            element={
+              <RequireAuth>
+                <Home />
+              </RequireAuth>
+            }
+          />
+          <Route
+            path="/notes/:id"
+            element={
+              <RequireAuth>
+                <NoteDetail />
+              </RequireAuth>
+            }
+          />
+        </Routes>
+      </AnimatePresence>
+    </MotionConfig>
   );
 };
 
