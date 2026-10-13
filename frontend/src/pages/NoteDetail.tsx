@@ -1,6 +1,14 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
-import { deleteNote, fetchNote, updateNote, remixNote, fetchPersonas, type Note } from '../api';
+import {
+  deleteNote,
+  fetchNote,
+  updateNote,
+  remixNote,
+  fetchPersonas,
+  RemixLimitError,
+  type Note,
+} from '../api';
 import type { NoteListItem } from '../api';
 import { AnimatePresence, motion } from 'framer-motion';
 import {
@@ -26,10 +34,13 @@ import Textarea from '../components/ui/textarea';
 import Button from '../components/ui/button';
 import Markdown from '../components/Markdown';
 import Spinner from '../components/ui/spinner';
+import { useToast } from '../components/ui/toast';
 
 // "Original" puts back the note as it was before this visit's remixes
 const ORIGINAL = { ...PLAIN, label: 'Original' };
 const DEFAULT_PERSONAS = VOICES.slice(1).map((v) => v.id);
+// Remixes left today at which a remix starts mentioning the count
+const REMIX_LOW = 5;
 
 const NoteDetail = () => {
   const { id } = useParams<{ id: string }>();
@@ -48,6 +59,7 @@ const NoteDetail = () => {
   const cancelRef = useRef<HTMLButtonElement | null>(null);
 
   const queryClient = useQueryClient();
+  const toast = useToast();
   const {
     data: note,
     isFetching,
@@ -232,13 +244,30 @@ const NoteDetail = () => {
   const remixMutation = useMutation({
     mutationFn: (p: string) => remixNote(noteId, p),
     onMutate: () => ({ before: note?.content ?? '' }),
-    onSuccess: (n, _p, ctx) => {
+    onSuccess: ({ note: n, remaining }, _p, ctx) => {
       setOriginalContent((prev) => prev ?? ctx?.before ?? null);
       queryClient.setQueryData(['note', noteId], n);
       queryClient.invalidateQueries({ queryKey: ['notes'] });
+      // Only speak up when the daily allowance is nearly gone
+      if (remaining != null && remaining <= REMIX_LOW)
+        toast.show({
+          title:
+            remaining === 0
+              ? 'That was the last remix for today'
+              : `${remaining} ${remaining === 1 ? 'remix' : 'remixes'} left today`,
+          description: 'The limit resets at midnight UTC.',
+          duration: 4000,
+        });
     },
-    onError: () => {
-      alert('Remix failed.');
+    onError: (e) => {
+      if (e instanceof RemixLimitError)
+        toast.show({ title: 'No remixes left today', description: e.message, duration: 6000 });
+      else
+        toast.show({
+          title: "Couldn't remix this note",
+          description: "The AI service didn't answer. Try again in a moment.",
+          duration: 4000,
+        });
     },
   });
   const isRemixing = remixMutation.isPending;

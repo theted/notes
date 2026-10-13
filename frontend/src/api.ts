@@ -53,14 +53,25 @@ export const deleteNote = async (id: number): Promise<void> => {
   if (!res.ok) throw new Error('Delete failed');
 };
 
-export const remixNote = async (id: number, persona: string): Promise<Note> => {
+// Thrown when today's remixes are used up; the message says when they come back
+export class RemixLimitError extends Error {}
+
+// `remaining`: remixes left today for this notebook and connection, whichever is lower
+export type RemixResult = { note: Note; remaining: number | null };
+
+export const remixNote = async (id: number, persona: string): Promise<RemixResult> => {
   const res = await fetch(`${BASE}/notes/${id}/remix`, {
     method: 'POST',
     headers: withPassword({ 'Content-Type': 'application/json' }),
     body: JSON.stringify({ persona }),
   });
+  if (res.status === 429) {
+    const body = (await res.json().catch(() => ({}))) as { message?: string };
+    throw new RemixLimitError(body.message ?? "You've used today's remixes. Try again tomorrow.");
+  }
   if (!res.ok) throw new Error('Remix failed');
-  return res.json();
+  const remaining = res.headers.get('X-RateLimit-Remaining');
+  return { note: await res.json(), remaining: remaining == null ? null : Number(remaining) };
 };
 
 export const fetchPersonas = async (): Promise<string[]> => {

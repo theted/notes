@@ -8,6 +8,9 @@ services:
       - DB_PATH=/data/notes.db
       - OPENAI_API_KEY=${OPENAI_API_KEY}
       - OPENAI_MODEL=${OPENAI_MODEL}
+      - REMIX_DAILY_LIMIT=${REMIX_DAILY_LIMIT:-25}
+      # Host nginx + the frontend's nginx: lets the remix limit see the real client IP
+      - TRUST_PROXY=2
     volumes:
       - notes_data:/data
     restart: unless-stopped
