@@ -7,8 +7,18 @@ import { requirePassword } from './auth.js';
 import { createNote, deleteNote, getNote, listNotes, searchNotes, updateNote } from './notes.js';
 import { remixContent, listPersonas, probeOpenAI } from './ai.js';
 import { initDb } from './orm.js';
+import {
+  REMIX_DAILY_LIMIT,
+  refundRemix,
+  remixSubjects,
+  takeRemix,
+  type RemixQuota,
+} from './remixQuota.js';
 
 const app = express();
+// Proxies in front of the API whose X-Forwarded-For to believe, so req.ip is the real client. On
+// the box that's 2: host nginx and the frontend's nginx (docker-compose.yml). 0 trusts none.
+app.set('trust proxy', Number(process.env.TRUST_PROXY ?? 0));
 app.use(cors());
 app.use(express.json({ limit: '1mb' }));
 app.use(morgan('dev'));
@@ -180,12 +190,35 @@ app.post('/api/notes/:id/remix', requirePassword, async (req, res) => {
     return res.status(400).json({ error: 'Invalid payload', details: parse.error.flatten() });
   const current = await getNote(id, userId);
   if (!current) return res.status(404).json({ error: 'Not found' });
+  const subjects = remixSubjects(userId, req.ip);
+  let quota: RemixQuota;
+  try {
+    quota = await takeRemix(subjects);
+  } catch (e) {
+    console.error('Remix quota check failed:', e);
+    return res.status(503).json({ error: "Couldn't check today's remix allowance" });
+  }
+  res.set({
+    'X-RateLimit-Limit': String(REMIX_DAILY_LIMIT),
+    'X-RateLimit-Remaining': String(quota.remaining),
+  });
+  if (!quota.ok) {
+    res.set('Retry-After', String(quota.resetIn));
+    return res.status(429).json({
+      error: 'Daily remix limit reached',
+      message: `You've reached today's limit of ${REMIX_DAILY_LIMIT} remixes. It resets at midnight UTC.`,
+    });
+  }
   try {
     const remixed = await remixContent(current.content, parse.data.persona);
     const updated = await updateNote(id, { title: current.title, content: remixed }, userId);
-    if (!updated) return res.status(500).json({ error: 'Failed to update' });
+    if (!updated) throw new Error('Failed to update');
     res.json(updated);
   } catch (e) {
+    await refundRemix(subjects, quota.day).catch((err) =>
+      console.error('Remix refund failed:', err),
+    );
+    res.set('X-RateLimit-Remaining', String(quota.remaining + 1));
     const message = e instanceof Error ? e.message : String(e);
     res.status(500).json({ error: 'Remix failed', details: message });
   }

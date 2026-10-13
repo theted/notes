@@ -79,6 +79,25 @@ NoteModel.init(
 User.hasMany(NoteModel, { foreignKey: 'user_id' });
 NoteModel.belongsTo(User, { foreignKey: 'user_id' });
 
+// Remixes used per UTC day, per subject ("user:<id>" or "ip:<address>"); see remixQuota.ts
+export class RemixUsage extends Model<
+  InferAttributes<RemixUsage>,
+  InferCreationAttributes<RemixUsage>
+> {
+  declare day: string;
+  declare subject: string;
+  declare count: number;
+}
+
+RemixUsage.init(
+  {
+    day: { type: DataTypes.TEXT, primaryKey: true },
+    subject: { type: DataTypes.TEXT, primaryKey: true },
+    count: { type: DataTypes.INTEGER, allowNull: false, defaultValue: 0 },
+  },
+  { sequelize, tableName: 'remix_usage', timestamps: false },
+);
+
 // Ensure updated_at changes on updates (SQLite trigger may not always exist)
 NoteModel.beforeUpdate((note) => {
   note.updated_at = new Date().toISOString();
