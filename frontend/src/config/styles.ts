@@ -25,6 +25,12 @@ export const kbd =
 export const noteCard =
   'relative block overflow-hidden rounded-2xl bg-white/[0.04] p-5 ring-1 ring-white/10 transition duration-300 hover:bg-white/[0.07] hover:ring-white/20 hover:shadow-[0_24px_60px_-28px_rgba(99,102,241,0.7)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400/70 focus-visible:bg-white/[0.07] before:pointer-events-none before:absolute before:inset-0 before:opacity-0 before:transition-opacity before:duration-300 hover:before:opacity-100 before:bg-[radial-gradient(28rem_circle_at_var(--x,50%)_var(--y,0%),rgba(129,140,248,0.16),transparent_60%)] after:pointer-events-none after:absolute after:inset-x-8 after:top-0 after:h-px after:bg-gradient-to-r after:from-transparent after:via-white/25 after:to-transparent';
 
+// The splash's demo note: a note card's glass, lifted off the page
+export const demoCard =
+  'relative overflow-hidden rounded-2xl bg-white/[0.06] p-6 ring-1 ring-white/15 backdrop-blur-xl shadow-[0_40px_90px_-35px_rgba(0,0,0,0.85),0_24px_60px_-30px_rgba(99,102,241,0.55)]';
+// Ghost notes drifting behind the splash (NoteCloud)
+export const ghostCard = 'rounded-xl bg-white/[0.04] p-4 ring-1 ring-white/10';
+
 export const searchInput =
   'h-14 pl-12 text-lg bg-white/[0.06] backdrop-blur-md placeholder:text-gray-500 focus:bg-white/[0.08] focus:shadow-[0_18px_50px_-24px_rgba(99,102,241,0.8)]';
 

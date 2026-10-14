@@ -31,6 +31,19 @@ module.exports = {
           '0%, 100%': { transform: 'translate3d(0, 0, 0) scale(1.05)' },
           '50%': { transform: 'translate3d(8vmax, -7vmax, 0) scale(0.9)' },
         },
+        // Splash ghost notes: slow bobs, out of step with each other
+        'float-a': {
+          '0%, 100%': { transform: 'translateY(0) rotate(-1.5deg)' },
+          '50%': { transform: 'translateY(-16px) rotate(0.5deg)' },
+        },
+        'float-b': {
+          '0%, 100%': { transform: 'translateY(0) rotate(1deg)' },
+          '50%': { transform: 'translateY(14px) rotate(-1deg)' },
+        },
+        'float-c': {
+          '0%, 100%': { transform: 'translate(0, 0) rotate(0deg)' },
+          '50%': { transform: 'translate(-10px, -12px) rotate(2deg)' },
+        },
         sweep: {
           '0%': { transform: 'translateX(-100%)' },
           '100%': { transform: 'translateX(200%)' },
@@ -43,6 +56,9 @@ module.exports = {
         'drift-b': 'drift-b 34s ease-in-out infinite',
         'drift-c': 'drift-c 41s ease-in-out infinite',
         sweep: 'sweep 1.4s ease-in-out infinite',
+        'float-a': 'float-a 13s ease-in-out infinite',
+        'float-b': 'float-b 17s ease-in-out infinite',
+        'float-c': 'float-c 21s ease-in-out infinite',
       },
       fontFamily: {
         sans: [
