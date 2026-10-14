@@ -8,6 +8,9 @@ import Page from '../components/Page';
 import BlurWords from '../components/BlurWords';
 import VoiceGlow from '../components/VoiceGlow';
 import VoiceChips from '../components/VoiceChips';
+import NoteCloud from '../components/NoteCloud';
+import RemixDemo from '../components/RemixDemo';
+import { usePointer } from '../hooks/usePointer';
 import Input from '../components/ui/input';
 import Button from '../components/ui/button';
 import { useAuth } from '../auth/AuthContext';
@@ -23,6 +26,7 @@ const Splash: React.FC = () => {
   const reduceMotion = useReducedMotion();
   const inputRef = useRef<HTMLInputElement>(null);
   const firstRemix = useRef(true);
+  const pointer = usePointer();
   const { login } = useAuth();
   const navigate = useNavigate();
   const location = useLocation() as unknown as { state?: { from?: { pathname?: string } } };
@@ -77,6 +81,7 @@ const Splash: React.FC = () => {
   return (
     <Page className="relative min-h-screen overflow-hidden">
       <VoiceGlow voice={voice} />
+      <NoteCloud pointer={pointer} />
 
       <header className={`${column} relative h-16 flex items-center`}>
         <motion.div className="text-2xl font-extralight tracking-tight" {...enterItem}>
@@ -85,7 +90,7 @@ const Splash: React.FC = () => {
       </header>
 
       <main
-        className={`${column} relative min-h-[calc(100vh-4rem)] flex flex-col justify-center pb-24`}
+        className={`${column} relative min-h-[calc(100vh-4rem)] flex flex-col justify-center pb-12`}
       >
         <motion.div layout="position" className={splashHeadlineBox}>
           <AnimatePresence mode="wait">
@@ -126,59 +131,67 @@ const Splash: React.FC = () => {
           />
         </motion.div>
 
-        <motion.p
-          layout="position"
-          className="mt-8 max-w-[34rem] text-lg font-light leading-relaxed text-gray-300"
-          {...enterItem}
-        >
-          Markdown notes with fuzzy search that forgives typos, a shortcut for every action, and an
-          AI remix that rewrites a note in another voice.
-        </motion.p>
+        {/* Wide screens: the demo note sits beside the form, reaching past the column's right edge */}
+        <div className="mt-8 grid gap-12 xl:-mr-32 xl:grid-cols-[minmax(0,1fr)_22rem] xl:items-center">
+          <div>
+            <motion.p
+              layout="position"
+              className="max-w-[34rem] text-lg font-light leading-relaxed text-gray-300"
+              {...enterItem}
+            >
+              Markdown notes with fuzzy search that forgives typos, a shortcut for every action, and
+              an AI remix that rewrites a note in another voice.
+            </motion.p>
 
-        <motion.form
-          layout="position"
-          onSubmit={onSubmit}
-          className="mt-10 w-full max-w-xl"
-          {...enterItem}
-        >
-          <label htmlFor="password" className="sr-only">
-            Password
-          </label>
-          <div className="flex flex-col gap-3 sm:flex-row">
-            <motion.div className="flex-1" {...inputFocus}>
-              <Input
-                id="password"
-                ref={inputRef}
-                type="password"
-                autoComplete="current-password"
-                value={pwd}
-                onChange={(e) => setPwd(e.target.value)}
-                placeholder="Password"
-              />
-            </motion.div>
-            <motion.div {...buttonHoverTap}>
-              <Button type="submit" size="lg" className="w-full sm:w-auto" disabled={loading}>
-                {loading ? 'Opening…' : 'Open notebook'}
-              </Button>
-            </motion.div>
+            <motion.form
+              layout="position"
+              onSubmit={onSubmit}
+              className="mt-10 w-full max-w-xl"
+              {...enterItem}
+            >
+              <label htmlFor="password" className="sr-only">
+                Password
+              </label>
+              <div className="flex flex-col gap-3 sm:flex-row">
+                <motion.div className="flex-1" {...inputFocus}>
+                  <Input
+                    id="password"
+                    ref={inputRef}
+                    type="password"
+                    autoComplete="current-password"
+                    value={pwd}
+                    onChange={(e) => setPwd(e.target.value)}
+                    placeholder="Password"
+                  />
+                </motion.div>
+                <motion.div {...buttonHoverTap}>
+                  <Button type="submit" size="lg" className="w-full sm:w-auto" disabled={loading}>
+                    {loading ? 'Opening…' : 'Open notebook'}
+                  </Button>
+                </motion.div>
+              </div>
+              <AnimatePresence>
+                {error && (
+                  <motion.p
+                    role="alert"
+                    className="mt-3 text-sm text-red-400"
+                    initial={{ opacity: 0, y: -4 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0 }}
+                  >
+                    {error}
+                  </motion.p>
+                )}
+              </AnimatePresence>
+              <p className="mt-3 text-sm text-gray-400">
+                Your password is your login. A new one starts a fresh notebook.
+              </p>
+            </motion.form>
           </div>
-          <AnimatePresence>
-            {error && (
-              <motion.p
-                role="alert"
-                className="mt-3 text-sm text-red-400"
-                initial={{ opacity: 0, y: -4 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0 }}
-              >
-                {error}
-              </motion.p>
-            )}
-          </AnimatePresence>
-          <p className="mt-3 text-sm text-gray-400">
-            Your password is your login. A new one starts a fresh notebook.
-          </p>
-        </motion.form>
+          <motion.div layout="position" className="w-full max-w-xl xl:max-w-none" {...enterItem}>
+            <RemixDemo voice={voice} pointer={pointer} />
+          </motion.div>
+        </div>
       </main>
     </Page>
   );

@@ -1,4 +1,4 @@
-import type { MotionProps, Transition, Variants } from 'framer-motion';
+import type { MotionProps, SpringOptions, Transition, Variants } from 'framer-motion';
 
 // Every page: one orchestrated load sequence; children with `enterItem` rise in turn
 export const enterSequence: MotionProps = {
@@ -54,6 +54,22 @@ export const remixWord: Variants = {
 
 // Active-voice pill sliding between chips (shared layoutId)
 export const pillSlide: Transition = { type: 'spring', stiffness: 380, damping: 32 };
+
+// Pointer-driven parallax and tilt (hooks/usePointer): eased, so the scene trails the cursor a touch
+export const pointerSpring: SpringOptions = { stiffness: 80, damping: 20, mass: 0.6 };
+
+// The splash's demo note bobs gently while it waits
+export const demoFloat: MotionProps = {
+  animate: { y: [0, -8, 0] },
+  transition: { duration: 7, repeat: Infinity, ease: 'easeInOut' },
+};
+
+// A band of light along the demo note's top edge, once per remix
+export const demoSweep: MotionProps = {
+  initial: { x: '-100%', opacity: 1 },
+  animate: { x: '100%', opacity: [1, 1, 0], transition: { duration: 1.1, ease: 'easeInOut' } },
+  exit: { opacity: 0, transition: { duration: 0.2 } },
+};
 
 // Voice-tinted glow crossfade behind the headline
 export const glowFade: MotionProps = {
