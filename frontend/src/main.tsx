@@ -8,6 +8,7 @@ import Splash from './pages/Splash';
 import Aurora from './components/Aurora';
 import { AuthProvider } from './auth/AuthContext';
 import RequireAuth from './auth/RequireAuth';
+import useVisitCounter from './hooks/useVisitCounter';
 import { QueryClientProvider } from '@tanstack/react-query';
 import { queryClient } from './queryClient';
 const ReactQueryDevtoolsLazy = React.lazy(() =>
@@ -18,6 +19,7 @@ import { ToastProvider } from './components/ui/toast';
 
 const Routed = () => {
   const location = useLocation();
+  useVisitCounter();
   return (
     <MotionConfig reducedMotion="user">
       <AnimatePresence>{location.pathname !== '/login' && <Aurora key="aurora" />}</AnimatePresence>
